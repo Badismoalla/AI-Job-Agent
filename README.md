@@ -382,4 +382,4 @@ Quality over quantity.
 
 The goal is not applying to hundreds of jobs.
 
-The goal is identifying positions where my background has a high probability of success and creating strong personalized applications.
+The goal is identifying positions where my background has a high probability of success and creating strong personalized applications.a

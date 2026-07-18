@@ -1,0 +1,1 @@
+"""Application tracker module."""

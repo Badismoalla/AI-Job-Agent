@@ -1,0 +1,269 @@
+{
+  "personal": {
+    "name": "Badis Moalla",
+    "email": "BadisMoalla@gmail.com",
+    "phone": "+216 24 960 735",
+    "location": "Tunis, Tunisia",
+    "linkedin": "linkedin.com/in/badismoalla",
+    "languages": [
+      { "name": "Arabic", "level": "Native" },
+      { "name": "English", "level": "C1 - Fluent" },
+      { "name": "French", "level": "C1 - Fluent" },
+      { "name": "German", "level": "Basic - A2" }
+    ]
+  },
+  "target": {
+    "primary_identity": "Software Test and Validation Engineer — Automotive Embedded Domain",
+
+    "roles": {
+      "primary": [
+        "Software Test and Validation Engineer",
+        "Embedded Test Engineer",
+        "Automotive QA Engineer",
+        "ECU Test Engineer",
+        "System Test Engineer",
+        "Integration Test Engineer",
+        "Test Automation Engineer",
+        "Software Quality Engineer"
+      ],
+      "secondary": [
+        "Junior Data Analyst",
+        "BI Developer",
+        "Power BI Developer",
+        "Data Quality Analyst",
+        "Business Analyst IT"
+      ]
+    },
+
+    "priority": {
+      "primary_weight": 0.85,
+      "secondary_weight": 0.15,
+      "note": "85% of daily applications must target primary roles. Secondary roles are opportunistic only — apply when matching rules pass."
+    },
+
+    "role_matching_rules": {
+      "primary_auto_apply": {
+        "description": "Always apply when role title matches any primary role OR contains these keywords",
+        "title_keywords": [
+          "test engineer", "validation engineer", "embedded test",
+          "automotive test", "QA engineer", "ECU test", "system test",
+          "integration test", "software quality", "test automation",
+          "verification engineer", "V&V engineer", "AUTOSAR"
+        ],
+        "domain_bonus_keywords": [
+          "automotive", "embedded", "ECU", "AUTOSAR", "BMW", "Bosch",
+          "Continental", "Aptiv", "NXP", "diagnostic", "UDS", "DoIP"
+        ]
+      },
+      "secondary_apply_only_if": {
+        "description": "Only apply to data/BI roles when ALL of the following conditions are met",
+        "required_skills_min_match": 3,
+        "required_skills": [
+          "Power BI",
+          "SQL",
+          "Python",
+          "data quality",
+          "reporting",
+          "dashboarding",
+          "ETL"
+        ],
+        "preferred_domains": [
+          "manufacturing",
+          "automotive",
+          "industrial",
+          "engineering",
+          "quality",
+          "business intelligence"
+        ],
+        "domain_match_required": true,
+        "seniority_allowed": ["junior", "mid", "analyst", "developer"],
+        "note": "Role must require Power BI or SQL or Python AND be in a manufacturing/automotive/engineering domain. Both conditions required."
+      },
+      "never_apply": {
+        "description": "Roles that do not match experience and should be skipped automatically",
+        "excluded_titles": [
+          "Data Scientist",
+          "Machine Learning Engineer",
+          "ML Engineer",
+          "AI Engineer",
+          "Senior Data Engineer",
+          "Cloud Data Engineer",
+          "Data Platform Engineer",
+          "MLOps Engineer",
+          "Deep Learning Engineer",
+          "NLP Engineer",
+          "Research Scientist"
+        ],
+        "excluded_keywords": [
+          "machine learning", "deep learning", "neural network",
+          "LLM", "generative AI", "MLOps", "Spark", "Hadoop",
+          "Databricks", "Snowflake", "cloud architecture"
+        ]
+      }
+    },
+
+    "search_keywords": {
+      "primary": [
+        "Software Test Engineer",
+        "Validation Engineer",
+        "Embedded Test Engineer",
+        "Automotive QA Engineer",
+        "ECU Test Engineer",
+        "System Test Engineer",
+        "Integration Test Engineer",
+        "Test Automation Engineer",
+        "Software Quality Engineer",
+        "AUTOSAR Test Engineer",
+        "V&V Engineer",
+        "Verification and Validation"
+      ],
+      "secondary": [
+        "Power BI Developer",
+        "Junior Data Analyst automotive",
+        "BI Developer manufacturing",
+        "Data Quality Analyst"
+      ]
+    },
+
+    "markets": ["Poland", "Netherlands", "Luxembourg", "UAE", "Saudi Arabia", "Qatar"],
+    "cities": {
+      "Poland": ["Krakow", "Wroclaw", "Warsaw"],
+      "Netherlands": ["Eindhoven", "Tilburg", "Amsterdam"],
+      "Luxembourg": ["Luxembourg City", "Colmar-Berg"],
+      "GCC": ["Dubai", "Abu Dhabi", "Riyadh", "Doha"]
+    },
+    "salary_expectations": {
+      "Poland_PLN_monthly": "14000-20000",
+      "Netherlands_EUR_annual": "45000-65000",
+      "Luxembourg_EUR_annual": "50000-70000",
+      "GCC_AED_monthly": "10000-15000"
+    },
+    "visa_required": true,
+    "relocation": "immediate",
+    "work_type": ["full-time", "on-site", "hybrid"]
+  },
+  "experience": [
+    {
+      "title": "Problem Manager - Process Improvement and Quality",
+      "company": "KPIT Engineering",
+      "company_context": "automotive supplier to BMW Group",
+      "location": "Sfax, Tunisia",
+      "start": "2025-05",
+      "end": null,
+      "current": true,
+      "achievements": [
+        "Reduced repeat incident rate by 30% over two quarters by mediating root-cause sessions between development and testing teams",
+        "Designed Jira dashboards from scratch tracking team deviations, SLA compliance, and backlog health across two project teams",
+        "Cut manual reporting effort by 40% by writing Python scripts to automatically extract, clean, and structure Jira deviation data",
+        "Prevented client escalations by managing end-to-end reclamation handling across 100,000+ records",
+        "Reduced incident resolution time by 25% through Power BI dashboards correlating defect patterns with release timelines"
+      ],
+      "tools": ["Python", "Jira", "Power BI", "SQL", "Excel"]
+    },
+    {
+      "title": "Software Test and Validation Engineer - ECU Security and Diagnostics Technical Reference",
+      "company": "KPIT Engineering",
+      "company_context": "automotive supplier to BMW Group",
+      "location": "Sfax, Tunisia",
+      "start": "2023-02",
+      "end": "2025-05",
+      "current": false,
+      "achievements": [
+        "Served as technical reference for BMW ECU security test domain: certificate installation, token verification, ECU access modes, secure boot",
+        "Detected 100+ diagnostic defects across multiple ECU variants using UDS (ISO 14229) and DoIP (ISO 13400) protocols",
+        "Reduced average defect reproduction time from days to hours by analysing DLT log frames and Wireshark packet captures on AUTOSAR Adaptive ECU platforms",
+        "Maintained zero traceability gaps across all release cycles using Test Guide (TG) and traceability matrices",
+        "Built Power BI dashboards tracking defect rate, test coverage, and release quality KPIs for weekly BMW project reviews",
+        "Executed SWE.6 software qualification testing within an ASPICE-aligned V-model environment"
+      ],
+      "tools": ["AUTOSAR Adaptive", "Test Guide (TG)", "Wireshark", "DLT Viewer", "Jira", "Power BI", "Python", "UDS", "DoIP", "BMW Zedis"]
+    },
+    {
+      "title": "Data Analyst and BI Developer - Intern",
+      "company": "AT Worthy",
+      "company_context": "Remote, Virginia USA",
+      "location": "Remote",
+      "start": "2022-03",
+      "end": "2022-10",
+      "current": false,
+      "achievements": [
+        "Designed Power BI and Tableau dashboards integrating multi-source business data",
+        "Built ETL pipelines using SSIS for data extraction, transformation, and loading",
+        "Standardised KPI definitions improving reporting consistency"
+      ],
+      "tools": ["Power BI", "Tableau", "SSIS", "SQL"]
+    },
+    {
+      "title": "BI Developer - Intern",
+      "company": "Clinisys",
+      "company_context": "Sfax, Tunisia",
+      "location": "Sfax, Tunisia",
+      "start": "2020-06",
+      "end": "2020-09",
+      "current": false,
+      "achievements": [
+        "Built real-time monitoring dashboards using Power BI and Python",
+        "Designed SQL scripts for automated reporting and data extraction"
+      ],
+      "tools": ["Power BI", "Python", "SQL"]
+    }
+  ],
+  "skills": {
+    "testing_and_validation": [
+      "Manual testing", "Automated testing", "Embedded systems validation",
+      "Test plan design", "Test case execution", "Defect lifecycle management",
+      "Regression testing", "Traceability matrices"
+    ],
+    "embedded_and_ecu": [
+      "AUTOSAR Adaptive", "ECU certificate installation", "Token verification",
+      "ECU access modes", "Secure boot", "DTC validation", "Diagnostics job testing"
+    ],
+    "diagnostic_protocols": [
+      "UDS (ISO 14229)", "DoIP (ISO 13400)", "TCP/IP", "SOME/IP",
+      "DLT log analysis", "Wireshark", "BMW Zedis diagnostic database"
+    ],
+    "standards_and_process": [
+      "ISO 26262 (aware)", "ASPICE V-model", "SWE.6",
+      "Root-cause analysis", "Problem management", "KPI tracking", "Agile", "Scrum"
+    ],
+    "test_management_tools": [
+      "Test Guide (TG)", "Jira", "Git"
+    ],
+    "automation_and_data": [
+      "Python", "Pandas", "NumPy", "Matplotlib",
+      "Power BI", "DAX", "Power Query", "SQL", "Excel"
+    ]
+  },
+  "education": {
+    "degree": "Diploma in Industrial Computer Engineering (Bac+5 - Master's Level)",
+    "institution": "ENET'Com - National School of Electronics and Telecommunications",
+    "location": "Sfax, Tunisia",
+    "start": "2019-09",
+    "end": "2022-12"
+  },
+  "certifications": [
+    { "name": "Google Data Analytics Professional Certificate", "status": "completed" },
+    { "name": "Python Developer Certificate", "status": "completed" },
+    { "name": "Scrum Fundamentals Certificate", "status": "completed" },
+    { "name": "Linux Fundamentals Certificate", "status": "completed" },
+    { "name": "Microsoft Power BI Data Analyst (PL-300)", "status": "in_progress", "expected": "2026" }
+  ],
+  "key_metrics": {
+    "manual_effort_reduction": "40%",
+    "incident_resolution_improvement": "25%",
+    "repeat_incident_reduction": "30%",
+    "defects_detected": "100+",
+    "records_analyzed": "100000+"
+  },
+  "known_skill_gaps": [
+    "Vector CANoe / CANalyzer (not used — Wireshark + DLT equivalent)",
+    "ISO 26262 formal certification (aware, not certified)",
+    "Azure (not a strong skill — do not overstate)"
+  ],
+  "do_not_overstate": [
+    "SSIS (internship only)",
+    "Azure",
+    "AUTOSAR Classic (only Adaptive)",
+    "CANoe / Vector tools"
+  ]
+}
