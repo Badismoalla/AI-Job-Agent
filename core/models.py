@@ -65,6 +65,7 @@ class ApplicationSource(str, Enum):
     EMAIL = "Direct email"
     AGENCY = "Recruitment agency"
     REFERRAL = "Referral"
+    MANUAL = "Manual (file)"  # Used by the analyze command — JD loaded from a text file
 
 
 class MessageType(str, Enum):

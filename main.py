@@ -6,15 +6,17 @@ Application entry point.
 Responsibilities:
 1. Parse CLI commands via Typer
 2. Initialise logging and configuration
-3. Run the requested command (daily plan, scrape, apply, track, etc.)
+3. Delegate to command modules
 4. Handle top-level errors gracefully
 
 Usage:
-    python main.py run          # Run full daily job search cycle
-    python main.py plan         # Show today's plan only (no applications)
-    python main.py stats        # Show tracker statistics
-    python main.py jobs         # Scrape and show new jobs
-    python main.py follow-ups   # Show and send follow-up emails
+    python main.py run                                  # Daily plan (scraper not yet implemented)
+    python main.py plan                                 # Show today's task list
+    python main.py stats                                # Application tracker stats
+    python main.py follow-ups                           # Follow-ups due
+    python main.py analyze jobs/bosch_test_engineer.txt # Analyse a JD file
+    python main.py analyze jobs/bosch.txt --force       # Analyse + force message generation
+    python main.py analyze jobs/bosch.txt --save        # Analyse + save messages to files
 """
 
 from pathlib import Path
@@ -23,6 +25,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from typing import Optional
 
 from config.settings import settings
 from core.logger import setup_logging, get_logger
@@ -169,6 +172,47 @@ def jobs() -> None:
     _print_header()
     console.print("[yellow]Job scraping not yet implemented.[/yellow]")
     console.print("Foundation ready. Next step: implement modules/scraper/pracuj.py")
+
+
+@app.command()
+def analyze(
+    file: Path = typer.Argument(
+        ...,
+        help="Path to a job description .txt file. Example: jobs/bosch_test_engineer.txt",
+        exists=False,  # We handle the error ourselves with a cleaner message
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        "-f",
+        help="Force message generation even if score is below the 70-point threshold.",
+    ),
+    save: bool = typer.Option(
+        False,
+        "--save",
+        "-s",
+        help="Save generated cover letter and recruiter message to files alongside the JD.",
+    ),
+) -> None:
+    """
+    Analyse a job description file and generate application messages.
+
+    Loads the JD, scores it against your profile, and displays:
+    match score, decision (APPLY/REVIEW/SKIP), matching skills, gaps,
+    and — if score >= 70 — a cover letter and recruiter InMail.
+
+    Example:
+        python main.py analyze jobs/bosch_test_engineer_wroclaw.txt
+        python main.py analyze jobs/role.txt --force --save
+    """
+    from commands.analyze import run_analyze, run_analyze_forced
+
+    _print_header()
+
+    if force:
+        run_analyze_forced(file, save_output=save)
+    else:
+        run_analyze(file, save_output=save)
 
 
 if __name__ == "__main__":

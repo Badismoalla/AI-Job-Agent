@@ -1,0 +1,40 @@
+Company: JSDSolutions
+Role: Automotive Test Engineer
+Location: Krakow, Poland
+Market: Poland
+URL: https://jobs.jsdsolutions.pl/automotive-test-engineer
+Visa Sponsorship: Yes
+
+---
+
+Job Description:
+
+JSDSolutions is seeking an Automotive Test Engineer to support our premium vehicle software testing team in Krakow.
+
+Your responsibilities:
+- Execute software and system-level testing for ECU components in premium automotive vehicles
+- Validate diagnostic jobs and DTC (Diagnostic Trouble Code) behaviour using established automotive diagnostic protocols
+- Act as the interface between the customer and the R&D development team for issue resolution
+- Reproduce, analyse, and document software defects in the ECU systems
+- Execute regression testing following software releases
+- Maintain test documentation and traceability records
+- Use Jira for defect management and project tracking
+- Participate in continuous improvement initiatives to enhance test process efficiency
+
+Your profile:
+- Engineering degree in Computer Science, Electrical Engineering, or Automotive Engineering
+- 2+ years of experience in automotive software testing
+- Knowledge of automotive ECU diagnostics and diagnostic protocols
+- Experience with CANoe, CANalyzer, or equivalent diagnostic analysis tools
+- Familiarity with CAN, LIN, or Ethernet-based automotive communication protocols
+- Experience with test management tools
+- Strong analytical skills and attention to detail
+- English fluency required; German is a plus
+- Willingness to collaborate with international teams
+
+We offer:
+- Competitive salary based on experience
+- Relocation support for candidates moving to Krakow
+- Work permit assistance for non-EU candidates
+- Private healthcare
+- Professional development budget

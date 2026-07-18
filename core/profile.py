@@ -83,7 +83,33 @@ class CandidateProfile:
 
     @property
     def target_roles(self) -> list[str]:
-        return self.target["roles"]
+        """
+        Return all target roles as a flat list.
+        Handles both old format (list) and new format (dict with primary/secondary keys).
+        """
+        roles = self.target["roles"]
+        if isinstance(roles, list):
+            return roles
+        # New format: {"primary": [...], "secondary": [...]}
+        primary = roles.get("primary", [])
+        secondary = roles.get("secondary", [])
+        return primary + secondary
+
+    @property
+    def primary_roles(self) -> list[str]:
+        """Return only PRIMARY target roles."""
+        roles = self.target["roles"]
+        if isinstance(roles, list):
+            return roles
+        return roles.get("primary", [])
+
+    @property
+    def secondary_roles(self) -> list[str]:
+        """Return only SECONDARY (data/BI) target roles."""
+        roles = self.target["roles"]
+        if isinstance(roles, list):
+            return []
+        return roles.get("secondary", [])
 
     @property
     def target_markets(self) -> list[str]:

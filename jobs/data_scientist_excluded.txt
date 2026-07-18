@@ -1,0 +1,33 @@
+Company: TechStartup Warsaw
+Role: Senior Data Scientist
+Location: Warsaw, Poland
+Market: Poland
+URL: https://techstartup.pl/careers/data-scientist
+Visa Sponsorship: No
+
+---
+
+Job Description:
+
+We are looking for a Senior Data Scientist to join our AI/ML team in Warsaw.
+
+Your responsibilities:
+- Design and deploy machine learning models for predictive analytics
+- Build deep learning pipelines using TensorFlow and PyTorch
+- Develop NLP models for text classification and sentiment analysis
+- Work with big data technologies: Spark, Hadoop, Databricks
+- Deploy models to AWS using MLOps practices (Kubernetes, Docker)
+- Collaborate with data engineers on Snowflake data warehouse solutions
+- Research and implement state-of-the-art generative AI techniques
+
+Your profile:
+- PhD or Master's in Machine Learning, Statistics, or Computer Science
+- 5+ years experience in machine learning and AI
+- Expert in Python, TensorFlow, PyTorch
+- Experience with Spark, Databricks, Snowflake
+- Strong MLOps background (Kubernetes, CI/CD for ML)
+- Publications in ML conferences preferred
+
+We offer:
+- Competitive salary
+- Stock options

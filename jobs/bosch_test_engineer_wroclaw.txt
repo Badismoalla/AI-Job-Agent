@@ -1,0 +1,41 @@
+Company: Bosch Engineering
+Role: Software Test & Validation Engineer
+Location: Wroclaw, Poland
+Market: Poland
+URL: https://jobs.bosch.com/job/wroclaw-test-engineer
+Visa Sponsorship: Yes
+
+---
+
+Job Description:
+
+We are looking for a Software Test and Validation Engineer to join our Automotive Embedded Systems team in Wroclaw.
+
+Your responsibilities:
+- Design and execute software test cases for embedded automotive ECU systems
+- Perform validation and verification activities within an ASPICE-aligned V-model development process
+- Execute system-level and integration testing for ECU software components
+- Analyse test results, identify defects, and track them through the full defect lifecycle
+- Work with UDS (ISO 14229) and DoIP (ISO 13400) diagnostic protocols for ECU validation
+- Use diagnostic tools to validate ECU behaviour and DTC handling
+- Maintain traceability matrices and test documentation
+- Create test reports and KPI dashboards for project managers and stakeholders
+- Collaborate with software developers and system architects to improve product quality
+
+Your profile:
+- Degree in Computer Science, Electronics, Automotive Engineering or similar
+- 2+ years experience in embedded software testing or automotive validation
+- Knowledge of AUTOSAR architecture (Classic or Adaptive)
+- Experience with UDS diagnostic protocol and ECU diagnostics
+- Familiarity with ASPICE processes and V-model development lifecycle
+- Experience with test management tools (Test Guide, ALM, or similar)
+- Proficiency with Jira for defect tracking and test management
+- Python or scripting skills for test automation are a plus
+- Experience with Wireshark, DLT Viewer, or similar diagnostic analysis tools is advantageous
+- Fluent English; German is a plus
+
+We offer:
+- Relocation support and work permit assistance for international candidates
+- Competitive salary: 16,000-22,000 PLN gross/month
+- Private medical care and life insurance
+- Flexible working hours
