@@ -32,10 +32,10 @@ from rich.text import Text
 
 from config.settings import settings
 from core.logger import get_logger
-from core.matcher import JobMatcher
 from core.models import MatchDecision, MatchReport, RoleTier
-from modules.analyzer.job_parser import JobParser, ParseError
+from modules.analyzer.job_parser import ParseError
 from modules.ai.claude_generator import ClaudeGenerator
+from commands.pipeline import parse_and_match
 
 logger = get_logger(__name__)
 console = Console()
@@ -70,7 +70,7 @@ def run_analyze(file_path: Path, save_output: bool = False) -> None:
 
     # ── Step 1: Parse ─────────────────────────────────────────────────────────
     try:
-        listing = JobParser.from_file(file_path)
+        listing, report = parse_and_match(file_path)
     except ParseError as e:
         console.print(f"[bold red]Parse error:[/bold red] {e}")
         raise SystemExit(1)
@@ -84,11 +84,7 @@ def run_analyze(file_path: Path, save_output: bool = False) -> None:
         )
     )
 
-    # ── Step 2: Evaluate ──────────────────────────────────────────────────────
-    matcher = JobMatcher()
-    report = matcher.evaluate(listing)
-
-    # ── Step 3: Display analysis ──────────────────────────────────────────────
+    # ── Step 2: Display analysis ──────────────────────────────────────────────
     _display_score_panel(report)
     _display_match_details(report)
     _display_gaps(report)
@@ -140,7 +136,7 @@ def run_analyze_forced(file_path: Path, save_output: bool = False) -> None:
     """Same as run_analyze but forces message generation regardless of score."""
     console.print()
     try:
-        listing = JobParser.from_file(file_path)
+        listing, report = parse_and_match(file_path)
     except ParseError as e:
         console.print(f"[bold red]Parse error:[/bold red] {e}")
         raise SystemExit(1)
@@ -153,9 +149,6 @@ def run_analyze_forced(file_path: Path, save_output: bool = False) -> None:
             border_style="blue",
         )
     )
-
-    matcher = JobMatcher()
-    report = matcher.evaluate(listing)
 
     _display_score_panel(report)
     _display_match_details(report)

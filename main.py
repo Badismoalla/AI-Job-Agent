@@ -174,6 +174,21 @@ def jobs() -> None:
     console.print("Foundation ready. Next step: implement modules/scraper/pracuj.py")
 
 
+@app.command(name="apply-preview")
+def apply_preview(
+    file: Path = typer.Argument(
+        ...,
+        help="Path to a job description .txt or .md file.",
+        exists=False,
+    ),
+) -> None:
+    """Generate a reviewable application package without applying or sending."""
+    from commands.apply_preview import run_apply_preview
+
+    _print_header()
+    run_apply_preview(file)
+
+
 @app.command()
 def analyze(
     file: Path = typer.Argument(

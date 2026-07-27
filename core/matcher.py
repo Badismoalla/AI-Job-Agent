@@ -20,10 +20,11 @@ A rejected REVIEW is better than a wasted APPLY on the wrong role.
 """
 
 import re
-from dataclasses import dataclass
+from datetime import date
 
 from core.logger import get_logger
 from core.models import JobListing, MatchDecision, MatchReport, RoleTier
+from core.profile import profile
 
 logger = get_logger(__name__)
 
@@ -107,6 +108,25 @@ _EXCLUDED_BODY_KEYWORDS: list[str] = [
     "azure architect", "cloud architecture", "terraform",
 ]
 
+_SENIOR_DATA_ENGINEER_EXCLUSION_KEYWORDS: list[str] = [
+    "spark", "databricks", "hadoop", "machine learning", "ml", "cloud architecture",
+]
+
+_LANGUAGE_KEYWORDS: list[str] = [
+    "english", "german", "deutsch", "french", "arabic", "polish", "dutch",
+]
+
+_SENIORITY_LEVELS: dict[str, int] = {
+    "intern": 0,
+    "junior": 1,
+    "mid": 2,
+    "intermediate": 2,
+    "senior": 3,
+    "lead": 4,
+    "principal": 5,
+    "staff": 5,
+}
+
 # Known gap mitigations — used in AI-generated messages
 KNOWN_GAP_MITIGATIONS: dict[str, str] = {
     "canoe": (
@@ -137,11 +157,12 @@ KNOWN_GAP_MITIGATIONS: dict[str, str] = {
 
 # Score weights per category (must sum to 100)
 _WEIGHTS = {
-    "title_match":    35,  # Title match is the strongest signal
-    "keyword_match":  25,  # JD body keywords
-    "domain_match":   20,  # Company/sector domain
-    "protocol_match": 15,  # UDS / DoIP / DLT / CAN — candidate's differentiator
-    "tools_match":    5,   # Specific tool overlap
+    "role_match": 25,
+    "technical_skills_match": 30,
+    "experience_match": 20,
+    "domain_match": 10,
+    "seniority_match": 10,
+    "location_language_match": 5,
 }
 
 # Decision thresholds
@@ -158,6 +179,17 @@ def _count_matches(text: str, keywords: list[str]) -> tuple[int, list[str]]:
     """Return count and list of keywords found in text."""
     found = [kw for kw in keywords if kw.lower() in text]
     return len(found), found
+
+
+def _years_between(start: str, end: str | None) -> float:
+    """Estimate elapsed years from YYYY-MM profile dates."""
+    start_year, start_month = (int(part) for part in start[:7].split("-"))
+    if end:
+        end_year, end_month = (int(part) for part in end[:7].split("-"))
+    else:
+        today = date.today()
+        end_year, end_month = today.year, today.month
+    return max(0.0, (end_year - start_year) + (end_month - start_month) / 12)
 
 
 class JobMatcher:
@@ -309,7 +341,12 @@ class JobMatcher:
         # Check exclusions first — hard stop
         excl_title, _ = _count_matches(title, _EXCLUDED_TITLE_KEYWORDS)
         excl_body, _ = _count_matches(full_text, _EXCLUDED_BODY_KEYWORDS)
-        if excl_title > 0 or excl_body >= 2:
+        senior_data_engineer = "senior data engineer" in title
+        senior_data_engineer_excluded = senior_data_engineer and any(
+            keyword in full_text
+            for keyword in _SENIOR_DATA_ENGINEER_EXCLUSION_KEYWORDS
+        )
+        if (excl_title > 0 and not senior_data_engineer) or senior_data_engineer_excluded or excl_body >= 2:
             return RoleTier.EXCLUDED
 
         # Check primary
