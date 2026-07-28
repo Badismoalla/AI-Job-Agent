@@ -4,6 +4,16 @@ tests/conftest.py
 Shared pytest fixtures available to all tests.
 """
 
+import os
+
+# config.settings.Settings() is instantiated at *import* time and requires
+# ANTHROPIC_API_KEY. Any test module that imports modules.ai.claude_generator
+# (directly or transitively) would otherwise fail at collection time in an
+# environment with no .env file. Set a harmless placeholder before any test
+# module is imported; real dry-run/mocked tests never make a network call
+# with it.
+os.environ.setdefault("ANTHROPIC_API_KEY", "test-key-for-unit-tests")
+
 import pytest
 from pathlib import Path
 from core.models import JobListing, Market, ApplicationSource

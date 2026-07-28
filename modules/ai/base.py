@@ -10,11 +10,14 @@ This base defines the contract every generator must fulfil:
 - generate_hr_email()
 - generate_follow_up()
 - generate_application_answer()
-- score_job_match()
 
 Why abstract?
 - Swap Claude for GPT-4 or a local model without changing any call sites
 - Test with a mock generator that returns fixed strings
+
+Note: job scoring is NOT part of this contract. core.matcher.JobMatcher is
+the single source of truth for match scoring — message generators only
+generate text, they never re-derive a score.
 """
 
 from abc import ABC, abstractmethod
@@ -71,17 +74,4 @@ class BaseMessageGenerator(ABC):
         max_words: int = 150,
     ) -> GeneratedMessage:
         """Answer a specific application question."""
-        ...
-
-    @abstractmethod
-    async def score_job_match(
-        self,
-        job: JobListing,
-    ) -> tuple[int, list[str]]:
-        """
-        Score how well this job matches the profile.
-
-        Returns:
-            (score 0-100, list of gap descriptions)
-        """
         ...

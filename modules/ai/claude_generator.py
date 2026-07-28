@@ -222,20 +222,6 @@ class ClaudeGenerator(BaseMessageGenerator):
 
         return await self._call(prompt, MessageType.APPLICATION_ANSWER)
 
-    async def score_job_match(
-        self,
-        job: JobListing,
-    ) -> tuple[int, list[str]]:
-        """
-        Return (score, gaps) for a job.
-        Note: primary scoring is done by core.matcher.JobMatcher (rule-based, fast, free).
-        This method provides an AI-augmented score for REVIEW-tier jobs.
-        """
-        from core.matcher import JobMatcher
-        matcher = JobMatcher()
-        report = matcher.evaluate(job)
-        return report.score, report.skill_gaps
-
     # ── Internal API call ─────────────────────────────────────────────────────
 
     async def _call(self, user_prompt: str, message_type: MessageType) -> str:

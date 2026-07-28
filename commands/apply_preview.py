@@ -4,7 +4,6 @@ import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 
-from rich.console import Console
 from rich.panel import Panel
 
 from core.exceptions import JobSearchError
@@ -12,10 +11,10 @@ from core.logger import get_logger
 from core.models import MatchDecision
 from modules.ai.claude_generator import ClaudeGenerator
 from commands.pipeline import parse_and_match
+from commands.display import console, decision_label, decision_border_style
 from modules.package.writer import ApplicationPackage, PackageWriter
 
 logger = get_logger(__name__)
-console = Console()
 
 
 def run_apply_preview(file_path: Path) -> None:
@@ -26,17 +25,15 @@ def run_apply_preview(file_path: Path) -> None:
         console.print(f"[bold red]Error:[/bold red] {exc}")
         raise SystemExit(1) from exc
 
-    decision = report.decision.value if hasattr(report.decision, "value") else report.decision
-
     console.print(
         Panel(
             f"[bold]{listing.title}[/bold]\n"
             f"[dim]{listing.company} · {listing.city} · {listing.market}[/dim]\n\n"
-            f"Decision: {_decision_style(decision)}\n"
+            f"Decision: {decision_label(report.decision)}\n"
             f"Match score: {report.score}/100\n"
             f"{report.reason}",
             title="Application Preview",
-            border_style=_border_style(decision),
+            border_style=decision_border_style(report.decision),
         )
     )
 
@@ -90,16 +87,3 @@ async def _generate_messages(listing, report) -> dict[str, str]:
         "recruiter_message": recruiter_message.body,
         "hr_email": hr_email.body,
     }
-
-
-def _decision_style(decision: str) -> str:
-    styles = {
-        "APPLY": "[bold green]APPLY[/bold green]",
-        "REVIEW": "[bold yellow]REVIEW[/bold yellow]",
-        "SKIP": "[bold red]SKIP[/bold red]",
-    }
-    return styles.get(decision, decision)
-
-
-def _border_style(decision: str) -> str:
-    return {"APPLY": "green", "REVIEW": "yellow", "SKIP": "red"}.get(decision, "blue")
