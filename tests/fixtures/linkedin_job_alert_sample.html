@@ -1,0 +1,92 @@
+<!--
+Saved sample LinkedIn "Job Alert" email HTML, used as a fixture by
+tests/unit/test_linkedin_alert_parser.py.
+
+This is a hand-built approximation of LinkedIn's documented job-alert email
+conventions (see the schema caveat in modules/gmail/linkedin_alert_parser.py):
+table-based layout (typical of marketing emails for client compatibility),
+job title as a link to linkedin.com/comm/jobs/view/<id>, a "Company · Location"
+text line, and a relative "posted X ago" line, all grouped within one job
+"card" cell. It is NOT a real captured email — this sandbox has no email
+account to pull one from. Replace this file with a real saved LinkedIn Job
+Alert email (Gmail > job alert email > "Show original" > save as .html) to
+validate parsing against the real thing.
+-->
+<html>
+<body>
+<table role="presentation" width="600">
+  <tr>
+    <td>
+      <h1>Job alert: 12 new jobs for "Test Engineer"</h1>
+    </td>
+  </tr>
+
+  <!-- Job 1: standard case, Poland, hours ago -->
+  <tr>
+    <td>
+      <a href="https://www.linkedin.com/comm/jobs/view/3812345678/?trk=eml-jobs-alert">
+        Senior Test Engineer
+      </a>
+      <br/>
+      Bosch Group &middot; Wroclaw, Poland
+      <br/>
+      7 hours ago
+    </td>
+  </tr>
+
+  <!-- Job 2: dash separator instead of middot, days ago -->
+  <tr>
+    <td>
+      <a href="https://www.linkedin.com/jobs/view/3812345679/">
+        QA Automation Engineer
+      </a>
+      <br/>
+      Continental - Krakow, Poland
+      <br/>
+      2 days ago
+    </td>
+  </tr>
+
+  <!-- Job 3: outside configured markets (should be filtered out) -->
+  <tr>
+    <td>
+      <a href="https://www.linkedin.com/comm/jobs/view/3812345680/?trk=eml-jobs-alert">
+        Validation Engineer
+      </a>
+      <br/>
+      Acme Corp &middot; New York, United States
+      <br/>
+      1 week ago
+    </td>
+  </tr>
+
+  <!-- Job 4: duplicate of Job 1's link (e.g. thumbnail image wrapper) — must not double-count -->
+  <tr>
+    <td>
+      <a href="https://www.linkedin.com/comm/jobs/view/3812345678/?trk=eml-jobs-alert-thumb">
+        <img src="https://static.licdn.com/logo.png" alt="" />
+      </a>
+    </td>
+  </tr>
+
+  <!-- Job 5: no separator in the company/location line -->
+  <tr>
+    <td>
+      <a href="https://www.linkedin.com/comm/jobs/view/3812345681/?trk=eml-jobs-alert">
+        Embedded Software Test Engineer
+      </a>
+      <br/>
+      Continental Poland
+      <br/>
+      3 weeks ago
+    </td>
+  </tr>
+
+  <tr>
+    <td>
+      <p>Unsubscribe from these alerts | LinkedIn Corporation &copy; 2026</p>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

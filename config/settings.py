@@ -66,6 +66,12 @@ class GmailSettings(BaseSettings):
     sender_email: str = Field(
         default="BadisMoalla@gmail.com", alias="GMAIL_SENDER_EMAIL"
     )
+    refresh_token: str | None = Field(
+        default=None,
+        alias="GMAIL_REFRESH_TOKEN",
+        description="OAuth2 refresh token from a prior authorization flow.",
+    )
+    token_uri: str = Field(default="https://oauth2.googleapis.com/token", alias="GMAIL_TOKEN_URI")
 
 
 class LinkedInSettings(BaseSettings):
@@ -86,6 +92,12 @@ class ScraperSettings(BaseSettings):
     delay_max: float = Field(default=5.0, alias="SCRAPER_DELAY_MAX")
     max_retries: int = Field(default=3, alias="SCRAPER_MAX_RETRIES")
     timeout: int = Field(default=30, alias="SCRAPER_TIMEOUT")
+    max_pages: int = Field(default=5, alias="SCRAPER_MAX_PAGES")
+    requests_per_minute: int | None = Field(
+        default=None,
+        alias="SCRAPER_REQUESTS_PER_MINUTE",
+        description="Optional hard cap on requests/minute, on top of the polite delay_min/delay_max.",
+    )
     user_agent: str = Field(
         default=(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

@@ -38,6 +38,16 @@ class ScraperBlockedError(ScraperError):
     pass
 
 
+class ScraperParseError(ScraperError):
+    """
+    Raised when a scraper's parse_page() returns data that doesn't satisfy
+    the framework contract — e.g. something other than a list of JobListing,
+    or a page result missing required fields. This should only ever fire on
+    a scraper implementation bug, not on network/site conditions.
+    """
+    pass
+
+
 class AIGenerationError(JobSearchError):
     """Raised when the AI fails to generate a message."""
     def __init__(self, message: str, message_type: str | None = None):
