@@ -44,12 +44,23 @@ class ClaudeGenerator(BaseMessageGenerator):
     """
 
     def __init__(self) -> None:
-        self._client = anthropic.Anthropic(
-            api_key=settings.ai.anthropic_api_key
-        )
+        api_key = settings.ai.anthropic_api_key
+        self._dry_run = settings.app.dry_run
+
+        if api_key is None:
+            if not self._dry_run:
+                raise AIGenerationError(
+                    "ANTHROPIC_API_KEY is not set. Add it to .env "
+                    "(and set APP_DRY_RUN=false) to generate live messages.",
+                    message_type="config",
+                )
+            # Dry-run mode never calls the API — use a placeholder so the
+            # SDK client can be constructed without a configured key.
+            api_key = "dry-run-placeholder"
+
+        self._client = anthropic.Anthropic(api_key=api_key)
         self._model = settings.ai.anthropic_model
         self._max_tokens = settings.ai.anthropic_max_tokens
-        self._dry_run = settings.app.dry_run
 
     async def generate_cover_letter(
         self,

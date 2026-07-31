@@ -51,6 +51,7 @@ python-dateutil==2.9.0       # Date parsing for application tracking
 # --- CLI interface ---
 rich==13.7.1                 # Beautiful terminal output, tables, progress bars
 typer==0.12.3                # Clean CLI argument parsing
+click==8.1.8                 # Pin click: 8.2+ broke Parameter.make_metavar() used by typer's help
 
 # --- Utilities ---
 python-slugify==8.0.4        # URL-safe slugs for job IDs

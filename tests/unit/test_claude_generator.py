@@ -360,6 +360,40 @@ class TestPromptCreation:
         assert captured["gaps"] == match_report.skill_gaps
 
 
+# ── Missing API key behaviour ───────────────────────────────────────────────
+
+class TestMissingApiKey:
+
+    def test_dry_run_constructs_without_key(self, monkeypatch):
+        """Dry-run never calls the API, so a missing key must not block construction."""
+        monkeypatch.setattr(settings.app, "dry_run", True)
+        monkeypatch.setattr(settings.ai, "anthropic_api_key", None)
+
+        gen = ClaudeGenerator()
+
+        assert gen._dry_run is True
+        assert settings.ai.anthropic_api_key is None
+
+    def test_live_mode_raises_without_key(self, monkeypatch):
+        """Calling live mode with no configured key must fail loudly, not at the network."""
+        monkeypatch.setattr(settings.app, "dry_run", False)
+        monkeypatch.setattr(settings.ai, "anthropic_api_key", None)
+
+        with pytest.raises(AIGenerationError) as exc_info:
+            ClaudeGenerator()
+
+        assert "ANTHROPIC_API_KEY is not set" in str(exc_info.value)
+
+    def test_live_mode_with_key_constructs(self, monkeypatch):
+        """With a key configured (as conftest.py does), live mode constructs normally."""
+        # settings.ai.anthropic_api_key is set by tests/conftest.py
+        assert settings.ai.anthropic_api_key is not None
+
+        monkeypatch.setattr(settings.app, "dry_run", False)
+        gen = ClaudeGenerator()
+        assert gen._dry_run is False
+
+
 # ── Retry / timeout behaviour ───────────────────────────────────────────────
 
 class TestRetryAndTimeoutBehaviour:

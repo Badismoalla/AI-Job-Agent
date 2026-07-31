@@ -44,7 +44,12 @@ class AppSettings(BaseSettings):
 class AISettings(BaseSettings):
     """AI provider configuration."""
 
-    anthropic_api_key: str = Field(alias="ANTHROPIC_API_KEY")
+    # Optional so the CLI (e.g. `--help`) starts without a configured key.
+    # Enforced when a live (non-dry-run) ClaudeGenerator is constructed —
+    # see modules/ai/claude_generator.py.
+    anthropic_api_key: str | None = Field(
+        default=None, alias="ANTHROPIC_API_KEY"
+    )
     anthropic_model: str = Field(
         default="claude-sonnet-4-6", alias="ANTHROPIC_MODEL"
     )
