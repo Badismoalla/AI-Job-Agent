@@ -21,7 +21,7 @@ Why a framework, not just an interface?
   live in exactly one place (this base class) instead of every subclass.
 
 Every scraper gets, for free:
-- A shared, retry-wrapped HTTP client (`self._get()`)
+- A shared, retry-wrapped HTTP client (`self._get()` / `self._post()`)
 - Configurable rate limiting between requests (modules/scraper/rate_limiter.py)
 - Configurable retry with exponential backoff (SCRAPER_MAX_RETRIES)
 - Pagination up to SCRAPER_MAX_PAGES, with fail-soft partial results
@@ -248,7 +248,7 @@ class BaseJobScraper(ABC):
         )
         return deduped
 
-    # ── Shared HTTP helper (retry + status-code handling) ──────────────────
+    # ── Shared HTTP helpers (retry + status-code handling) ──────────────────
 
     async def _get(self, url: str, **kwargs) -> httpx.Response:
         """
@@ -259,6 +259,19 @@ class BaseJobScraper(ABC):
         and the ScraperRateLimitError/ScraperBlockedError raised below).
         Raises the last exception if all attempts are exhausted.
         """
+        return await self._request("GET", url, **kwargs)
+
+    async def _post(self, url: str, **kwargs) -> httpx.Response:
+        """
+        POST with the same automatic retry and rate-limit/block detection
+        as `_get()`. Needed for APIs that require POST for reads (e.g.
+        Workday's CXS job-search endpoint) — pass `json=...` for the body,
+        same as httpx.AsyncClient.post().
+        """
+        return await self._request("POST", url, **kwargs)
+
+    async def _request(self, method: str, url: str, **kwargs) -> httpx.Response:
+        """Shared retry/status-handling core for _get() and _post()."""
         if self._client is None:
             raise RuntimeError("Scraper must be used as an async context manager")
 
@@ -271,10 +284,11 @@ class BaseJobScraper(ABC):
         ):
             with attempt:
                 self.logger.debug(
-                    "GET {url} | attempt={attempt}/{max_retries}",
-                    url=url, attempt=attempt.retry_state.attempt_number, max_retries=self.max_retries,
+                    "{method} {url} | attempt={attempt}/{max_retries}",
+                    method=method, url=url,
+                    attempt=attempt.retry_state.attempt_number, max_retries=self.max_retries,
                 )
-                response = await self._client.get(url, **kwargs)
+                response = await self._client.request(method, url, **kwargs)
                 last_response = response
                 self._raise_for_scraper_status(response, url)
 

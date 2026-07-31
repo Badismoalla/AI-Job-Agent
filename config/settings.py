@@ -140,6 +140,42 @@ class TrackerSettings(BaseSettings):
     )
 
 
+class PipelineSettings(BaseSettings):
+    """
+    Full application-pipeline behaviour (core/pipeline.py): which scrapers
+    run on a normal pipeline execution, and the score cutoff for
+    generating AI messages.
+
+    enabled_scrapers is comma-separated (not a JSON list) so it's easy to
+    set from a plain .env line. Defaults to the three job-board scrapers
+    only — company ATS scrapers (greenhouse, lever, smartrecruiters,
+    workday) require config/company_sources.json entries to do anything
+    useful, and enabling them by default would mean a first-run pipeline
+    silently hits real companies' ATS endpoints using the sample/unverified
+    entries in that file. Opt in explicitly once you've reviewed and
+    verified your own company list.
+    """
+
+    score_threshold: int = Field(
+        default=70,
+        alias="PIPELINE_SCORE_THRESHOLD",
+        description="Minimum JobMatcher score (0-100) for a job to be accepted and get AI messages generated.",
+    )
+    enabled_scrapers: str = Field(
+        default="nofluffjobs,pracuj,justjoinit",
+        alias="PIPELINE_ENABLED_SCRAPERS",
+        description=(
+            "Comma-separated scraper keys to run. Job boards: nofluffjobs, pracuj, "
+            "justjoinit. Company ATS platforms (need config/company_sources.json): "
+            "greenhouse, lever, smartrecruiters, workday."
+        ),
+    )
+
+    @property
+    def enabled_scrapers_list(self) -> list[str]:
+        return [key.strip().lower() for key in self.enabled_scrapers.split(",") if key.strip()]
+
+
 class Settings(BaseSettings):
     """
     Root settings object.
@@ -162,6 +198,7 @@ class Settings(BaseSettings):
     linkedin: LinkedInSettings = LinkedInSettings()
     scraper: ScraperSettings = ScraperSettings()
     tracker: TrackerSettings = TrackerSettings()
+    pipeline: PipelineSettings = PipelineSettings()
 
 
 # Module-level singleton — import this everywhere

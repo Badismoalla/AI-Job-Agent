@@ -340,6 +340,49 @@ class TestGetRetryAndStatusHandling:
                 await scraper._get("https://example.com/jobs")
 
 
+class TestPostRetryAndStatusHandling:
+    """_post() shares _get()'s retry/status-handling core via _request() —
+    these tests confirm the refactor works for POST specifically (needed
+    for APIs like Workday's CXS endpoint, which is POST-only)."""
+
+    def _client_for(self, handler) -> httpx.AsyncClient:
+        return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+    @pytest.mark.asyncio
+    async def test_successful_post_returns_response_and_sends_json_body(self):
+        received = {}
+
+        def handler(request):
+            received["method"] = request.method
+            received["body"] = request.content
+            return httpx.Response(200, json={"ok": True})
+
+        async with FakeScraper(
+            pages={}, client=self._client_for(handler), max_retries=1, retry_wait=wait_none()
+        ) as scraper:
+            response = await scraper._post("https://example.com/api", json={"limit": 20, "offset": 0})
+            assert response.status_code == 200
+
+        assert received["method"] == "POST"
+        assert b'"limit": 20' in received["body"] or b'"limit":20' in received["body"]
+
+    @pytest.mark.asyncio
+    async def test_post_retries_and_raises_scraper_error_like_get(self):
+        calls = {"n": 0}
+
+        def handler(request):
+            calls["n"] += 1
+            return httpx.Response(429)
+
+        async with FakeScraper(
+            pages={}, client=self._client_for(handler), max_retries=3, retry_wait=wait_none()
+        ) as scraper:
+            with pytest.raises(ScraperRateLimitError):
+                await scraper._post("https://example.com/api", json={})
+
+        assert calls["n"] == 3
+
+
 # ── Client lifecycle / injection ────────────────────────────────────────────
 
 class TestClientLifecycle:

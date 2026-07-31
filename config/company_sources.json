@@ -1,0 +1,27 @@
+{
+  "_note": "Sample/illustrative company entries for each ATS platform, used to demonstrate and test the config schema modules/scraper/company/*.py expects. These are real companies believed to use the named platform as of this writing, but board_token/site_name/company_id/tenant values are NOT verified against live endpoints from this environment (see the schema caveat in each scraper module) — treat this file as a starting point to verify and extend, not a guaranteed-current source list. Add/remove companies here; no code changes needed to add a new company on an already-implemented platform.",
+
+  "greenhouse": [
+    {"name": "Stripe", "board_token": "stripe"},
+    {"name": "Airbnb", "board_token": "airbnb"},
+    {"name": "Robinhood", "board_token": "robinhood"}
+  ],
+
+  "lever": [
+    {"name": "Netflix", "site_name": "netflix"},
+    {"name": "Figma", "site_name": "figma"},
+    {"name": "Rippling", "site_name": "rippling"}
+  ],
+
+  "smartrecruiters": [
+    {"name": "Visa", "company_id": "Visa"},
+    {"name": "Bosch Group", "company_id": "BoschGroup"},
+    {"name": "IKEA", "company_id": "IKEA1"}
+  ],
+
+  "workday": [
+    {"name": "Salesforce", "tenant": "salesforce", "wd_server": "wd1", "site": "External_Career_Site"},
+    {"name": "HP", "tenant": "hp", "wd_server": "wd5", "site": "ExternalCareerSite"},
+    {"name": "Kainos", "tenant": "kainos", "wd_server": "wd3", "site": "kainos"}
+  ]
+}
