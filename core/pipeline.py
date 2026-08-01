@@ -101,6 +101,7 @@ class PipelineResult:
     scraped: list[JobListing] = field(default_factory=list)
     deduplicated: list[JobListing] = field(default_factory=list)
     duplicates_removed: int = 0
+    matched: list[tuple[JobListing, MatchReport]] = field(default_factory=list)
     accepted: list[JobListing] = field(default_factory=list)
     applications_created: list[Application] = field(default_factory=list)
     skipped_already_applied: int = 0
@@ -408,6 +409,7 @@ async def run_pipeline(
     job_board_scrapers: dict[str, type[BaseJobScraper]] | None = None,
     company_ats_scrapers: dict[str, type[CompanyJobScraper]] | None = None,
     company_sources: dict[str, list[dict[str, Any]]] | None = None,
+    generate_messages: bool = True,
 ) -> PipelineResult:
     """
     Run the full application pipeline end to end.
@@ -436,6 +438,13 @@ async def run_pipeline(
             Override the scraper registries / company config — this is the
             seam tests use to inject fake scraper classes instead of
             hitting real job boards.
+        generate_messages: If False, run scrape -> dedupe -> match only,
+            then stop — no AI messages are generated, no Application is
+            stored, and no job is marked seen in the tracker (this is a
+            fully read-only "discovery" pass). Used by the CLI's `jobs`
+            command; `run` leaves this at the default True. Every other
+            stage (scraping, dedup, matching, PipelineResult.matched/
+            accepted) behaves identically either way.
 
     Returns:
         PipelineResult summarising every stage.
@@ -476,7 +485,8 @@ async def run_pipeline(
                 console.print(f"  [yellow]- {err.source}: {err.error}[/yellow]")
 
         for job in scraped:
-            tracker.mark_job_seen(job.id)
+            if generate_messages:
+                tracker.mark_job_seen(job.id)
 
         deduped, removed = deduplicate_jobs(scraped)
         result.deduplicated = deduped
@@ -487,18 +497,25 @@ async def run_pipeline(
         )
 
         matched = _match_all(deduped, console)
+        result.matched = matched
         accepted = _filter_accepted(matched, threshold)
         result.accepted = [job for job, _ in accepted]
         console.print(f"[dim]{len(accepted)}/{len(deduped)} job(s) scored >= {threshold} threshold[/dim]")
 
-        applications, skipped = await _generate_and_store(accepted, tracker, generator, console)
-        result.applications_created = applications
-        result.skipped_already_applied = skipped
+        if generate_messages:
+            applications, skipped = await _generate_and_store(accepted, tracker, generator, console)
+            result.applications_created = applications
+            result.skipped_already_applied = skipped
 
-        console.print(
-            f"\n[bold green]Pipeline complete[/bold green] — "
-            f"{len(applications)} application(s) created, {skipped} already applied (skipped)"
-        )
+            console.print(
+                f"\n[bold green]Pipeline complete[/bold green] — "
+                f"{len(applications)} application(s) created, {skipped} already applied (skipped)"
+            )
+        else:
+            console.print(
+                "\n[dim]Discovery mode — skipping AI message generation, application storage, "
+                "and tracker updates.[/dim]"
+            )
     finally:
         result.finished_at = datetime.now(timezone.utc)
         if owns_tracker:

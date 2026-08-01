@@ -197,6 +197,36 @@ class TestJobParserFromText:
         listing = JobParser.from_text(JD_GCC_INFERRED)
         assert listing.market == Market.UAE
 
+    JD_RIYADH = textwrap.dedent("""\
+        Company: Capgemini
+        Role: Test Engineer
+        Location: Riyadh
+        URL: https://capgemini.com/jobs/123
+        ---
+        Automotive embedded testing role in Riyadh.
+        UDS diagnostics, ECU validation, AUTOSAR.
+    """)
+
+    JD_DOHA = textwrap.dedent("""\
+        Company: Capgemini
+        Role: Test Engineer
+        Location: Doha
+        URL: https://capgemini.com/jobs/124
+        ---
+        Automotive embedded testing role in Doha.
+        UDS diagnostics, ECU validation, AUTOSAR.
+    """)
+
+    def test_riyadh_maps_to_saudi_arabia_not_uae(self):
+        """GCC city inference must map Riyadh to Saudi Arabia, not UAE."""
+        listing = JobParser.from_text(self.JD_RIYADH)
+        assert listing.market == Market.SAUDI_ARABIA
+
+    def test_doha_maps_to_qatar_not_uae(self):
+        """GCC city inference must map Doha to Qatar, not UAE."""
+        listing = JobParser.from_text(self.JD_DOHA)
+        assert listing.market == Market.QATAR
+
     def test_visa_yes_parsed(self):
         listing = JobParser.from_text(VALID_JD_FULL)
         assert listing.visa_sponsorship is True

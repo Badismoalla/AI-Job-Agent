@@ -44,6 +44,7 @@ class ApplicationTracker:
         self._db = TinyDB(db_path, storage=CachingMiddleware(JSONStorage))
         self._apps = self._db.table("applications")
         self._jobs = self._db.table("jobs_seen")
+        self._pipeline_runs = self._db.table("pipeline_runs")
         logger.info("Tracker initialised | db={path}", path=str(db_path))
 
     def add_application(self, application: Application) -> None:
@@ -114,12 +115,13 @@ class ApplicationTracker:
 
         today_apps = [
             a for a in all_apps
-            if a.get("applied_at", "").startswith(today)
+            if (a.get("applied_at") or "").startswith(today)
         ]
 
         return {
             "total_applications": len(all_apps),
             "today_applications": len(today_apps),
+            "sent": len([a for a in all_apps if a["status"] == ApplicationStatus.SENT.value]),
             "interviews": len([a for a in all_apps if a["status"] == "interview"]),
             "offers": len([a for a in all_apps if a["status"] == "offer"]),
             "rejected": len([a for a in all_apps if a["status"] == "rejected"]),
@@ -136,6 +138,32 @@ class ApplicationTracker:
     def is_job_seen(self, job_id: str) -> bool:
         """Return True if we have seen this job before."""
         return bool(self._jobs.search(Query().job_id == job_id))
+
+    def record_pipeline_run(self, stats: dict) -> None:
+        """
+        Store a summary record of one core.pipeline.run_pipeline() execution.
+
+        Application records alone can't answer "how many jobs were
+        scraped/rejected/deduplicated" — Application objects only ever
+        exist for *accepted* jobs. This is the only place that history is
+        persisted, which is what makes the `stats` CLI command's scraped/
+        accepted/rejected/duplicate/per-source numbers possible at all.
+
+        `stats` is caller-defined (see commands/pipeline_cli.py) — this
+        method doesn't interpret it, just timestamps and stores it.
+        """
+        record = dict(stats)
+        record["recorded_at"] = datetime.utcnow().isoformat()
+        self._pipeline_runs.insert(record)
+        logger.info("Pipeline run recorded | recorded_at={ts}", ts=record["recorded_at"])
+
+    def get_last_pipeline_run(self) -> dict | None:
+        """Return the most recently recorded pipeline run, or None if
+        no pipeline run has ever been recorded."""
+        all_runs = self._pipeline_runs.all()
+        if not all_runs:
+            return None
+        return max(all_runs, key=lambda r: r.get("recorded_at", ""))
 
     def close(self) -> None:
         """Flush and close the database."""

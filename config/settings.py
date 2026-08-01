@@ -10,15 +10,37 @@ Uses pydantic-settings to:
 
 Usage:
     from config.settings import settings
-    print(settings.anthropic_api_key)
+    print(settings.ai.anthropic_api_key)
+
+IMPORTANT — nested settings and .env loading:
+Each sub-settings group is its own BaseSettings subclass with its own
+SettingsConfigDict(env_file=".env"). This is deliberate: pydantic-settings
+only reads `.env` for the model whose configuration points at it, and a
+sub-settings instance created inside the root class body is built *before*
+the root Settings ever gets a chance to load `.env`. Giving every nested
+class its own env_file makes each one load `.env` directly at
+instantiation time, and the root Settings constructs them via
+Field(default_factory=...) so a fresh Settings() always builds fresh
+sub-settings against the current environment rather than reusing stale
+class-attribute defaults.
 """
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_ENV_FILE = ".env"
+_ENV_FILE_ENCODING = "utf-8"
+
 
 class AppSettings(BaseSettings):
     """Core application behaviour settings."""
+
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding=_ENV_FILE_ENCODING,
+        case_sensitive=False,
+        extra="ignore",
+    )
 
     env: str = Field(default="development", alias="APP_ENV")
     log_level: str = Field(default="INFO", alias="APP_LOG_LEVEL")
@@ -47,6 +69,13 @@ class AISettings(BaseSettings):
     # Optional so the CLI (e.g. `--help`) starts without a configured key.
     # Enforced when a live (non-dry-run) ClaudeGenerator is constructed —
     # see modules/ai/claude_generator.py.
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding=_ENV_FILE_ENCODING,
+        case_sensitive=False,
+        extra="ignore",
+    )
+
     anthropic_api_key: str | None = Field(
         default=None, alias="ANTHROPIC_API_KEY"
     )
@@ -62,6 +91,13 @@ class AISettings(BaseSettings):
 
 class GmailSettings(BaseSettings):
     """Gmail API configuration."""
+
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding=_ENV_FILE_ENCODING,
+        case_sensitive=False,
+        extra="ignore",
+    )
 
     client_id: str | None = Field(default=None, alias="GMAIL_CLIENT_ID")
     client_secret: str | None = Field(default=None, alias="GMAIL_CLIENT_SECRET")
@@ -82,6 +118,13 @@ class GmailSettings(BaseSettings):
 class LinkedInSettings(BaseSettings):
     """LinkedIn browser automation configuration."""
 
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding=_ENV_FILE_ENCODING,
+        case_sensitive=False,
+        extra="ignore",
+    )
+
     email: str | None = Field(default=None, alias="LINKEDIN_EMAIL")
     password: str | None = Field(default=None, alias="LINKEDIN_PASSWORD")
     profile_url: str = Field(
@@ -92,6 +135,13 @@ class LinkedInSettings(BaseSettings):
 
 class ScraperSettings(BaseSettings):
     """Job board scraping behaviour."""
+
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding=_ENV_FILE_ENCODING,
+        case_sensitive=False,
+        extra="ignore",
+    )
 
     delay_min: float = Field(default=2.0, alias="SCRAPER_DELAY_MIN")
     delay_max: float = Field(default=5.0, alias="SCRAPER_DELAY_MAX")
@@ -133,6 +183,13 @@ class ScraperSettings(BaseSettings):
 class TrackerSettings(BaseSettings):
     """Application tracking behaviour."""
 
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding=_ENV_FILE_ENCODING,
+        case_sensitive=False,
+        extra="ignore",
+    )
+
     daily_min_applications: int = Field(
         default=10, alias="DAILY_MIN_APPLICATIONS"
     )
@@ -161,6 +218,13 @@ class PipelineSettings(BaseSettings):
     verified your own company list.
     """
 
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding=_ENV_FILE_ENCODING,
+        case_sensitive=False,
+        extra="ignore",
+    )
+
     score_threshold: int = Field(
         default=70,
         alias="PIPELINE_SCORE_THRESHOLD",
@@ -186,24 +250,25 @@ class Settings(BaseSettings):
     Root settings object.
     Composes all sub-settings and loads from .env file.
 
-    All sub-settings inherit from the same .env — pydantic-settings
-    resolves the field aliases automatically.
+    Each sub-settings group is built via Field(default_factory=...) so a
+    fresh Settings() always constructs fresh nested instances that read
+    `.env` at construction time (see module docstring for why).
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
+        env_file=_ENV_FILE,
+        env_file_encoding=_ENV_FILE_ENCODING,
         case_sensitive=False,
         extra="ignore",
     )
 
-    app: AppSettings = AppSettings()
-    ai: AISettings = AISettings()
-    gmail: GmailSettings = GmailSettings()
-    linkedin: LinkedInSettings = LinkedInSettings()
-    scraper: ScraperSettings = ScraperSettings()
-    tracker: TrackerSettings = TrackerSettings()
-    pipeline: PipelineSettings = PipelineSettings()
+    app: AppSettings = Field(default_factory=AppSettings)
+    ai: AISettings = Field(default_factory=AISettings)
+    gmail: GmailSettings = Field(default_factory=GmailSettings)
+    linkedin: LinkedInSettings = Field(default_factory=LinkedInSettings)
+    scraper: ScraperSettings = Field(default_factory=ScraperSettings)
+    tracker: TrackerSettings = Field(default_factory=TrackerSettings)
+    pipeline: PipelineSettings = Field(default_factory=PipelineSettings)
 
 
 # Module-level singleton — import this everywhere

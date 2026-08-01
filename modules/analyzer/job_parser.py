@@ -270,11 +270,21 @@ class JobParser:
                 )
                 return value
 
-        # GCC city heuristic
-        gcc_cities = {"dubai", "abu dhabi", "riyadh", "doha", "manama", "muscat"}
-        for city in gcc_cities:
+        # GCC city heuristic — map each city to its actual configured target
+        # market. Riyadh/Doha must not be labeled UAE; Manama (Bahrain) and
+        # Muscat (Oman) aren't configured markets at all, so they fall
+        # through to the "cannot determine market" error rather than being
+        # silently mislabeled.
+        gcc_city_markets = {
+            "dubai": Market.UAE,
+            "abu dhabi": Market.UAE,
+            "riyadh": Market.SAUDI_ARABIA,
+            "jeddah": Market.SAUDI_ARABIA,
+            "doha": Market.QATAR,
+        }
+        for city, market in gcc_city_markets.items():
             if city in location_lower:
-                return Market.UAE
+                return market
 
         raise ParseError(
             f"Cannot determine market from '{market_str}' or location '{location}' in {path.name}.\n"

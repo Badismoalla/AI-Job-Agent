@@ -10,9 +10,10 @@ Responsibilities:
 4. Handle top-level errors gracefully
 
 Usage:
-    python main.py run                                  # Daily plan (scraper not yet implemented)
-    python main.py plan                                 # Show today's task list
-    python main.py stats                                # Application tracker stats
+    python main.py run                                  # Full pipeline: scrape, match, generate, store
+    python main.py jobs                                 # Discovery mode: scrape + match only, no storage
+    python main.py plan                                 # Show today's task list + pipeline config
+    python main.py stats                                # Application tracker + pipeline-run stats
     python main.py follow-ups                           # Follow-ups due
     python main.py analyze jobs/bosch_test_engineer.txt # Analyse a JD file
     python main.py analyze jobs/bosch.txt --force       # Analyse + force message generation
@@ -62,14 +63,12 @@ def _print_header() -> None:
 
 @app.command()
 def run() -> None:
-    """Run the full daily job search cycle."""
+    """Run the full daily job search cycle: scrape, dedupe, match, generate messages, and store applications."""
+    from commands.pipeline_cli import run_full_pipeline_command
+
     _print_header()
     logger.info("Starting full daily cycle")
-    console.print("\n[yellow]Full cycle not yet implemented.[/yellow]")
-    console.print(
-        "Foundation ready. Next: implement scraper → AI generator → tracker cycle."
-    )
-    plan()
+    run_full_pipeline_command()
 
 
 @app.command()
@@ -106,6 +105,9 @@ def plan() -> None:
 
     console.print(table)
 
+    from commands.pipeline_cli import render_pipeline_plan
+    render_pipeline_plan()
+
 
 @app.command()
 def stats() -> None:
@@ -127,6 +129,9 @@ def stats() -> None:
     table.add_row("Follow-ups due", f"[yellow]{data['pending_follow_ups']}[/yellow]")
 
     console.print(table)
+
+    from commands.pipeline_cli import render_extended_stats
+    render_extended_stats()
 
 
 @app.command(name="follow-ups")
@@ -168,10 +173,11 @@ def follow_ups() -> None:
 
 @app.command()
 def jobs() -> None:
-    """Scrape all boards and show new job listings. (Scraper not yet implemented.)"""
+    """Scrape all enabled sources and show matched job listings (discovery mode — no messages generated, nothing stored)."""
+    from commands.pipeline_cli import run_jobs_command
+
     _print_header()
-    console.print("[yellow]Job scraping not yet implemented.[/yellow]")
-    console.print("Foundation ready. Next step: implement modules/scraper/pracuj.py")
+    run_jobs_command()
 
 
 @app.command(name="apply-preview")
