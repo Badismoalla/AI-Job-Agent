@@ -12,11 +12,40 @@ Why centralise models here?
 Every module imports from here. Nothing defines its own data shapes.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+
+def utc_now() -> datetime:
+    """Return a timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
+
+
+def normalize_datetime(value: datetime | None) -> datetime | None:
+    """Normalize naive datetimes to UTC and preserve timezone-aware values."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def parse_datetime(value: datetime | str | None) -> datetime | None:
+    """Parse a stored datetime value from either a string or a datetime object."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return normalize_datetime(value)
+    if isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return normalize_datetime(parsed)
+    return None
 
 
 # ── Enums ────────────────────────────────────────────────────────────────────
@@ -93,7 +122,7 @@ class JobListing(BaseModel):
     salary_range: str | None = Field(default=None, description="Salary range if posted")
     visa_sponsorship: bool = Field(default=False, description="Does the posting mention visa sponsorship")
     posted_date: datetime | None = Field(default=None)
-    scraped_at: datetime = Field(default_factory=datetime.utcnow)
+    scraped_at: datetime = Field(default_factory=utc_now)
     match_score: int | None = Field(default=None, description="0-100 relevance score assigned by AI")
     match_gaps: list[str] = Field(default_factory=list, description="Skills in JD not in profile")
     already_applied: bool = Field(default=False)
@@ -155,7 +184,7 @@ class MatchReport(BaseModel):
     secondary_skills_matched: list[str] = Field(default_factory=list)
     secondary_domain_matched: bool = False
 
-    evaluated_at: datetime = Field(default_factory=datetime.utcnow)
+    evaluated_at: datetime = Field(default_factory=utc_now)
 
     class Config:
         use_enum_values = True
@@ -169,7 +198,7 @@ class GeneratedMessage(BaseModel):
     type: MessageType
     subject: str | None = None
     body: str
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=utc_now)
     model_used: str | None = None
     tokens_used: int | None = None
 
@@ -187,8 +216,8 @@ class Application(BaseModel):
     recruiter_email: str | None = None
     notes: str | None = None
     messages: list[GeneratedMessage] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
     def needs_follow_up(self, after_days: int = 7) -> bool:
         """Return True if application was sent N+ days ago with no response."""
@@ -196,7 +225,7 @@ class Application(BaseModel):
             return False
         if self.applied_at is None:
             return False
-        delta = datetime.utcnow() - self.applied_at
+        delta = utc_now() - normalize_datetime(self.applied_at)
         return delta.days >= after_days
 
     class Config:
@@ -212,7 +241,7 @@ class LinkedInProfileScore(BaseModel):
     score: int = Field(ge=0, le=100)
     issue: str
     fix: str
-    checked_at: datetime = Field(default_factory=datetime.utcnow)
+    checked_at: datetime = Field(default_factory=utc_now)
 
 
 class RecruiterContact(BaseModel):
@@ -243,7 +272,7 @@ class DailyTask(BaseModel):
 class DailyPlan(BaseModel):
     """The full daily job search plan."""
 
-    date: datetime = Field(default_factory=datetime.utcnow)
+    date: datetime = Field(default_factory=utc_now)
     tasks: list[DailyTask] = Field(default_factory=list)
     jobs_to_apply: list[JobListing] = Field(default_factory=list)
     recruiters_to_message: list[RecruiterContact] = Field(default_factory=list)

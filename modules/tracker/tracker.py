@@ -26,7 +26,7 @@ from tinydb.middlewares import CachingMiddleware
 
 from core.exceptions import DuplicateApplicationError, TrackerError
 from core.logger import get_logger
-from core.models import Application, ApplicationStatus, DailyPlan
+from core.models import Application, ApplicationStatus, DailyPlan, normalize_datetime, parse_datetime, utc_now
 
 logger = get_logger(__name__)
 
@@ -78,7 +78,7 @@ class ApplicationTracker:
         self._apps.update(
             {
                 "status": status.value,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": utc_now().isoformat(),
             },
             App.id == application_id,
         )
@@ -93,11 +93,12 @@ class ApplicationTracker:
         App = Query()
         sent = self._apps.search(App.status == ApplicationStatus.SENT.value)
         due = []
-        cutoff = datetime.utcnow()
+        cutoff = utc_now()
         for record in sent:
             applied_at = record.get("applied_at")
-            if applied_at:
-                delta = cutoff - datetime.fromisoformat(applied_at)
+            parsed_applied_at = parse_datetime(applied_at)
+            if parsed_applied_at is not None:
+                delta = cutoff - parsed_applied_at
                 if delta.days >= after_days:
                     due.append(record)
         logger.info(
@@ -109,7 +110,7 @@ class ApplicationTracker:
 
     def daily_stats(self) -> dict:
         """Return stats for today's session and all-time totals."""
-        today = datetime.utcnow().date().isoformat()
+        today = utc_now().date().isoformat()
         App = Query()
         all_apps = self._apps.all()
 
@@ -131,7 +132,7 @@ class ApplicationTracker:
     def mark_job_seen(self, job_id: str) -> None:
         """Mark a job as seen (scraped) so we don't re-scrape it tomorrow."""
         self._jobs.upsert(
-            {"job_id": job_id, "seen_at": datetime.utcnow().isoformat()},
+            {"job_id": job_id, "seen_at": utc_now().isoformat()},
             Query().job_id == job_id,
         )
 
@@ -153,7 +154,7 @@ class ApplicationTracker:
         method doesn't interpret it, just timestamps and stores it.
         """
         record = dict(stats)
-        record["recorded_at"] = datetime.utcnow().isoformat()
+        record["recorded_at"] = utc_now().isoformat()
         self._pipeline_runs.insert(record)
         logger.info("Pipeline run recorded | recorded_at={ts}", ts=record["recorded_at"])
 

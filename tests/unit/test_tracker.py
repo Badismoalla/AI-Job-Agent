@@ -1,6 +1,6 @@
 """Unit tests for ApplicationTracker."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -49,6 +49,29 @@ def test_follow_up_not_due(sample_job, tmp_db):
         tracker.add_application(recent_app)
         due = tracker.get_follow_ups_due(after_days=7)
         assert len(due) == 0
+
+
+def test_follow_up_due_for_timezone_aware_datetime(sample_job, tmp_db):
+    with ApplicationTracker(tmp_db) as tracker:
+        old_app = Application(
+            id="app-aware",
+            job=sample_job,
+            status=ApplicationStatus.SENT,
+            applied_at=datetime.now(timezone.utc) - timedelta(days=8),
+        )
+        tracker.add_application(old_app)
+        due = tracker.get_follow_ups_due(after_days=7)
+        assert len(due) == 1
+
+
+def test_application_needs_follow_up_for_timezone_aware_datetime(sample_job):
+    app = Application(
+        id="app-aware-model",
+        job=sample_job,
+        status=ApplicationStatus.SENT,
+        applied_at=datetime.now(timezone.utc) - timedelta(days=8),
+    )
+    assert app.needs_follow_up(after_days=7) is True
 
 
 def test_status_update(sample_job, tmp_db):
