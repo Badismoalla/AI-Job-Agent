@@ -215,7 +215,10 @@ class PipelineSettings(BaseSettings):
     useful, and enabling them by default would mean a first-run pipeline
     silently hits real companies' ATS endpoints using the sample/unverified
     entries in that file. Opt in explicitly once you've reviewed and
-    verified your own company list.
+    verified your own company list. The Gmail/LinkedIn-alert provider
+    ("gmail_linkedin") is likewise opt-in — it requires GMAIL_CLIENT_ID/
+    SECRET/REFRESH_TOKEN to be configured; if enabled without them it fails
+    softly per run (recorded like any other failed source), not at startup.
     """
 
     model_config = SettingsConfigDict(
@@ -234,9 +237,11 @@ class PipelineSettings(BaseSettings):
         default="nofluffjobs,pracuj,justjoinit",
         alias="PIPELINE_ENABLED_SCRAPERS",
         description=(
-            "Comma-separated scraper keys to run. Job boards: nofluffjobs, pracuj, "
-            "justjoinit. Company ATS platforms (need config/company_sources.json): "
-            "greenhouse, lever, smartrecruiters, workday."
+            "Comma-separated discovery provider keys to run. Job boards: nofluffjobs, pracuj, "
+            "justjoinit (public scrapers — see known live-reliability limitations in README). "
+            "Company ATS platforms (need config/company_sources.json): "
+            "greenhouse, lever, smartrecruiters, workday. Gmail/LinkedIn Job Alert ingestion "
+            "(needs Gmail OAuth2 credentials): gmail_linkedin."
         ),
     )
 

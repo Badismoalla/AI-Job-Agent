@@ -8,7 +8,12 @@ messages for those, and store the result via ApplicationTracker.
 
 Pipeline stages (in order):
     1. Build one scraper instance per enabled job board, and one instance
-       per configured company on each enabled ATS platform.
+       per configured company on each enabled ATS platform. If
+       "gmail_linkedin" is enabled, also build a GmailAlertProvider
+       (core/discovery.py) for LinkedIn Job Alert email ingestion — a
+       different discovery mechanism (Gmail search + parse, not a
+       BaseJobScraper), run alongside the scrapers below and merged into
+       the same result before dedup.
     2. Run every instance concurrently. One failing scraper (bad network,
        a single company's ATS being down, a parse error) is caught and
        logged — it does not abort the rest of the pipeline.
@@ -47,6 +52,12 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from config.settings import settings
+from core.discovery import (
+    COMPANY_ATS_SCRAPERS,
+    JOB_BOARD_SCRAPERS,
+    GmailAlertProvider,
+    build_gmail_provider,
+)
 from core.exceptions import DuplicateApplicationError, ScraperError
 from core.logger import get_logger
 from core.matcher import JobMatcher
@@ -55,32 +66,16 @@ from core.profile import profile
 from modules.ai.claude_generator import ClaudeGenerator
 from modules.scraper.base import BaseJobScraper
 from modules.scraper.company.base import CompanyJobScraper, load_company_sources
-from modules.scraper.company.greenhouse import GreenhouseScraper
-from modules.scraper.company.lever import LeverScraper
-from modules.scraper.company.smartrecruiters import SmartRecruitersScraper
-from modules.scraper.company.workday import WorkdayScraper
-from modules.scraper.justjoinit import JustJoinITScraper
-from modules.scraper.nofluffjobs import NoFluffJobsScraper
-from modules.scraper.pracuj import PracujScraper
 from modules.tracker.tracker import ApplicationTracker
 
 logger = get_logger(__name__)
 
-# ── Scraper registries — overridable per-call for tests via run_pipeline()'s
-# job_board_scrapers/company_ats_scrapers params ───────────────────────────
-
-JOB_BOARD_SCRAPERS: dict[str, type[BaseJobScraper]] = {
-    "nofluffjobs": NoFluffJobsScraper,
-    "pracuj": PracujScraper,
-    "justjoinit": JustJoinITScraper,
-}
-
-COMPANY_ATS_SCRAPERS: dict[str, type[CompanyJobScraper]] = {
-    "greenhouse": GreenhouseScraper,
-    "lever": LeverScraper,
-    "smartrecruiters": SmartRecruitersScraper,
-    "workday": WorkdayScraper,
-}
+# JOB_BOARD_SCRAPERS / COMPANY_ATS_SCRAPERS now live in core/discovery.py (the
+# provider registry module) and are re-exported here so existing imports
+# elsewhere in the project (`from core.pipeline import JOB_BOARD_SCRAPERS`,
+# used by commands/pipeline_cli.py and tests/unit/test_pipeline.py) keep
+# working unchanged. GMAIL_PROVIDER_KEY/known_provider_keys are re-exported
+# for the same reason — see core/discovery.py for why the registries moved.
 
 
 # ── Result types ─────────────────────────────────────────────────────────────
@@ -384,6 +379,32 @@ async def _generate_and_store(
     return applications, skipped_already_applied
 
 
+# ── Gmail/LinkedIn-alert discovery phase ─────────────────────────────────────
+# Additive alongside the existing BaseJobScraper scraping phase above — see
+# core/discovery.py module docstring for why Gmail isn't routed through
+# _build_scraper_instances/_run_one_scraper (it isn't a BaseJobScraper).
+
+async def _run_gmail_provider(
+    provider: GmailAlertProvider, roles: list[str], cities: list[str],
+) -> tuple[list[JobListing], ScraperRunError | None]:
+    """
+    Run the Gmail discovery provider with the same fail-soft contract as
+    _run_one_scraper: never raises, returns (listings, error_or_None). An
+    unconfigured-but-enabled provider fails softly here too (via
+    provider.discover() raising RuntimeError — see GmailAlertProvider.
+    is_available()), not a silent no-op.
+    """
+    try:
+        listings = await provider.discover(roles=roles, cities=cities)
+        return listings, None
+    except Exception as e:  # noqa: BLE001 - intentional: matches _run_one_scraper's boundary
+        logger.warning(
+            "Discovery provider failed, continuing with other sources | source={key} | error={error}",
+            key=provider.key, error=str(e),
+        )
+        return [], ScraperRunError(source=provider.key, error=str(e))
+
+
 # ── Profile helpers ──────────────────────────────────────────────────────────
 
 def _flatten_profile_cities() -> list[str]:
@@ -409,6 +430,7 @@ async def run_pipeline(
     job_board_scrapers: dict[str, type[BaseJobScraper]] | None = None,
     company_ats_scrapers: dict[str, type[CompanyJobScraper]] | None = None,
     company_sources: dict[str, list[dict[str, Any]]] | None = None,
+    gmail_provider: GmailAlertProvider | None = None,
     generate_messages: bool = True,
 ) -> PipelineResult:
     """
@@ -425,7 +447,8 @@ async def run_pipeline(
         cities: Target cities. Defaults to profile's flattened city list.
         score_threshold: Minimum JobMatcher score to accept a job. Defaults
             to settings.pipeline.score_threshold.
-        enabled_scrapers: Which scraper keys to run. Defaults to
+        enabled_scrapers: Which discovery provider keys to run — job board
+            keys, ATS platform keys, and/or "gmail_linkedin". Defaults to
             settings.pipeline.enabled_scrapers_list.
         tracker: ApplicationTracker instance. Defaults to a new one (opened
             and closed by this call). Pass one in to reuse an existing
@@ -438,6 +461,12 @@ async def run_pipeline(
             Override the scraper registries / company config — this is the
             seam tests use to inject fake scraper classes instead of
             hitting real job boards.
+        gmail_provider: Override the Gmail discovery provider (e.g. inject
+            one built with a fake GmailClient in tests). If None and
+            "gmail_linkedin" is in the enabled scrapers, one is built via
+            GmailAlertProvider's default (GmailClient.from_settings) —
+            gracefully unavailable, not a crash, if Gmail isn't configured
+            (see GmailAlertProvider.is_available()).
         generate_messages: If False, run scrape -> dedupe -> match only,
             then stop — no AI messages are generated, no Application is
             stored, and no job is marked seen in the tracker (this is a
@@ -466,6 +495,9 @@ async def run_pipeline(
             logger.warning("Could not load company_sources.json, no ATS companies will run | error={e}", e=str(e))
             company_sources = {}
 
+    if gmail_provider is None:
+        gmail_provider = build_gmail_provider(enabled)
+
     owns_tracker = tracker is None
     tracker = tracker or ApplicationTracker()
     generator = generator or ClaudeGenerator()
@@ -474,9 +506,17 @@ async def run_pipeline(
 
     try:
         instances = _build_scraper_instances(enabled, job_board_scrapers, company_ats_scrapers, company_sources)
+        total_sources = len(instances) + (1 if gmail_provider is not None else 0)
 
-        console.print(f"\n[bold]Running {len(instances)} scraper source(s)...[/bold]")
+        console.print(f"\n[bold]Running {total_sources} scraper source(s)...[/bold]")
         scraped, errors = await _scrape_all(instances, roles, cities, console)
+
+        if gmail_provider is not None:
+            gmail_listings, gmail_error = await _run_gmail_provider(gmail_provider, roles, cities)
+            scraped.extend(gmail_listings)
+            if gmail_error is not None:
+                errors.append(gmail_error)
+
         result.scraped = scraped
         result.errors = errors
         if errors:

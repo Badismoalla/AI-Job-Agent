@@ -27,6 +27,7 @@ from rich.table import Table
 from commands.display import console as shared_console
 from commands.display import decision_label
 from config.settings import settings
+from core.discovery import GMAIL_PROVIDER_KEY, GmailAlertProvider
 from core.exceptions import ScraperError
 from core.models import JobListing, MatchReport
 from core.pipeline import COMPANY_ATS_SCRAPERS, JOB_BOARD_SCRAPERS, PipelineResult, run_pipeline
@@ -252,7 +253,11 @@ def render_pipeline_plan(console: Console | None = None) -> None:
     enabled = settings.pipeline.enabled_scrapers_list
     enabled_job_boards = [key for key in enabled if key in JOB_BOARD_SCRAPERS]
     enabled_ats_platforms = [key for key in enabled if key in COMPANY_ATS_SCRAPERS]
-    unknown = [key for key in enabled if key not in JOB_BOARD_SCRAPERS and key not in COMPANY_ATS_SCRAPERS]
+    gmail_enabled = GMAIL_PROVIDER_KEY in enabled
+    unknown = [
+        key for key in enabled
+        if key not in JOB_BOARD_SCRAPERS and key not in COMPANY_ATS_SCRAPERS and key != GMAIL_PROVIDER_KEY
+    ]
 
     try:
         company_sources = load_company_sources()
@@ -271,6 +276,15 @@ def render_pipeline_plan(console: Console | None = None) -> None:
         "Enabled company ATS platforms",
         ", ".join(enabled_ats_platforms) if enabled_ats_platforms else "[dim]none[/dim]",
     )
+    if gmail_enabled:
+        gmail_status = (
+            "[green]configured[/green]"
+            if GmailAlertProvider().is_available()
+            else "[yellow]enabled, not configured[/yellow]"
+        )
+        info_table.add_row("Gmail/LinkedIn alert discovery", gmail_status)
+    else:
+        info_table.add_row("Gmail/LinkedIn alert discovery", "[dim]disabled[/dim]")
     if unknown:
         info_table.add_row("Unknown scraper keys (ignored)", f"[yellow]{', '.join(unknown)}[/yellow]")
 
@@ -291,6 +305,9 @@ def render_pipeline_plan(console: Console | None = None) -> None:
         for company in company_sources.get(key, []):
             exec_table.add_row(str(row_num), f"{key}.{company.get('name', 'unknown')}", "Company ATS")
             row_num += 1
+    if gmail_enabled:
+        exec_table.add_row(str(row_num), "gmail_linkedin", "Gmail/LinkedIn alert")
+        row_num += 1
 
     if row_num == 1:
         console.print("\n[yellow]No scraper sources are enabled — check PIPELINE_ENABLED_SCRAPERS.[/yellow]")

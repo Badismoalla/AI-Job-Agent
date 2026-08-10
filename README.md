@@ -239,6 +239,55 @@ Daily workflow:
    - Follow-up date
 
 
+# Discovery Providers
+
+Job discovery is provider-based (`core/discovery.py`): the pipeline runs
+whichever providers are listed in `PIPELINE_ENABLED_SCRAPERS` (comma-separated
+env var), collects `JobListing`s from each, and continues even if some
+providers fail — one bad source never blocks the others.
+
+Provider keys and what they need:
+
+| Key | Type | Needs |
+|---|---|---|
+| `nofluffjobs`, `pracuj`, `justjoinit` | Public job-board scraper | Nothing — enabled by default |
+| `greenhouse`, `lever`, `smartrecruiters`, `workday` | Company ATS | Entries in `config/company_sources.json` for that platform |
+| `gmail_linkedin` | Gmail/LinkedIn Job Alert ingestion | `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` |
+
+Default: `PIPELINE_ENABLED_SCRAPERS=nofluffjobs,pracuj,justjoinit` — the
+three job-board scrapers only. Company ATS and Gmail are both **opt-in**:
+add their keys to the comma-separated list to enable them (e.g.
+`nofluffjobs,pracuj,justjoinit,gmail_linkedin,greenhouse`).
+
+**Gmail/LinkedIn alerts**: this never scrapes linkedin.com directly — it
+reads LinkedIn "Job Alert" emails already sitting in your own Gmail inbox
+(via the read-only Gmail API) and parses job postings out of them. If
+`gmail_linkedin` is enabled but the three `GMAIL_*` credentials above
+aren't configured, it fails softly per run (shows up as a normal failed
+source in the `jobs`/`run` output) — it does not crash the CLI, and no
+Gmail credentials are required just to run `python main.py --help` or use
+the other providers.
+
+**Company ATS**: `config/company_sources.json` is configuration-driven —
+add a company under the right platform key and it's scraped automatically,
+no code changes needed. The shipped file contains sample/illustrative
+entries only (see the `_note` field in that file) — verify or replace them
+before relying on this for a real job search.
+
+**Known limitations of the public job-board scrapers** (`nofluffjobs`,
+`pracuj`, `justjoinit`): these three sites' endpoints/markup have changed
+more than once already and are not guaranteed to keep working — each
+scraper module (`modules/scraper/{nofluffjobs,pracuj,justjoinit}.py`)
+documents its current best-effort fix and exactly what to check if it
+breaks again. Treat them as "may work" sources, not guaranteed-reliable
+ones — this is why company ATS and Gmail/LinkedIn-alert discovery exist as
+independent, more durable alternatives.
+
+Unknown keys in `PIPELINE_ENABLED_SCRAPERS` are reported clearly (not
+silently ignored) — `python main.py plan` lists them under "Unknown
+scraper keys (ignored)" so a typo doesn't fail silently.
+
+
 # Project Architecture
 
 ```text
