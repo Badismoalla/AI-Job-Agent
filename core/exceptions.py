@@ -81,3 +81,15 @@ class LinkedInError(JobSearchError):
 class ProfileNotFoundError(JobSearchError):
     """Raised when profile.json is missing or malformed."""
     pass
+
+
+class InvalidLifecycleTransitionError(JobSearchError):
+    """Raised when attempting an invalid job lifecycle state transition."""
+    def __init__(self, current_state: str, event: str, reason: str = ""):
+        self.current_state = current_state
+        self.event = event
+        self.reason = reason
+        msg = f"Invalid transition from {current_state} via '{event}'"
+        if reason:
+            msg += f": {reason}"
+        super().__init__(msg)

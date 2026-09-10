@@ -127,6 +127,48 @@ class JobListing(BaseModel):
     match_gaps: list[str] = Field(default_factory=list, description="Skills in JD not in profile")
     already_applied: bool = Field(default=False)
     duplicate_of: str | None = Field(default=None, description="ID of duplicate listing if detected")
+    
+    # Phase 2A: Extracted structured fields (all optional for backward compatibility)
+    remote_policy: str | None = Field(
+        default=None,
+        description="FULLY_REMOTE/HYBRID/ON_SITE/UNKNOWN extracted from description"
+    )
+    languages_required: list[dict[str, str]] = Field(
+        default_factory=list,
+        description="List of {language, required_level, is_mandatory} dicts extracted from description"
+    )
+    salary_min: int | None = Field(default=None, description="Salary minimum (original currency/period)")
+    salary_max: int | None = Field(default=None, description="Salary maximum (original currency/period)")
+    salary_currency: str | None = Field(default=None, description="Currency code (EUR, PLN, USD, etc.)")
+    salary_period: str | None = Field(default=None, description="PER_YEAR/PER_MONTH/PER_HOUR/PER_DAY/UNKNOWN")
+    salary_original_text: str | None = Field(default=None, description="Original salary text from posting")
+    application_deadline: str | None = Field(
+        default=None,
+        description="ISO date string if explicit deadline found"
+    )
+    location_country: str | None = Field(default=None, description="Country extracted or inferred from location")
+    remote_region: str | None = Field(
+        default=None,
+        description="Region if remote (e.g., 'Europe', 'EMEA', 'Worldwide')"
+    )
+    
+    # Phase 2B: Company Intelligence (all optional, inferred from description/source)
+    company_domain: str | None = Field(
+        default=None,
+        description="Company domain/website inferred from career page URL or known companies"
+    )
+    company_industry: str | None = Field(
+        default=None,
+        description="Industry keyword inferred from job description (e.g., 'automotive', 'fintech')"
+    )
+    company_size: str | None = Field(
+        default=None,
+        description="Company size category: SMALL/MEDIUM/LARGE or None if unknown"
+    )
+    company_description: str | None = Field(
+        default=None,
+        description="Short company description extracted from job posting (if available)"
+    )
 
     class Config:
         use_enum_values = True
@@ -180,6 +222,64 @@ class MatchReport(BaseModel):
         description="True when CANoe is listed as required but candidate's DLT/Wireshark experience covers it"
     )
 
+    # Phase 2A: Work authorization, remote, language, salary, location assessment
+    # All default to empty/UNKNOWN for backward compatibility
+    work_authorization_compatibility: str | None = Field(
+        default=None,
+        description="COMPATIBLE/INCOMPATIBLE/REVIEW/NEUTRAL from compatibility.AuthorizationCompatibility"
+    )
+    remote_compatibility: str | None = Field(
+        default=None,
+        description="COMPATIBLE/MISMATCH_SLIGHT/MISMATCH_SIGNIFICANT/UNKNOWN from compatibility.RemoteCompatibility"
+    )
+    language_requirements: dict[str, str] = Field(
+        default_factory=dict,
+        description="Language -> MET/CLOSE/MISSING/UNKNOWN from compatibility.LanguageMatchStatus"
+    )
+    salary_compatibility: str | None = Field(
+        default=None,
+        description="WITHIN_RANGE/BELOW_MINIMUM/UNKNOWN/CURRENCY_MISMATCH from compatibility.SalaryCompatibility"
+    )
+    location_compatibility: str | None = Field(
+        default=None,
+        description="COMPATIBLE/REMOTE_EU/UNKNOWN/INCOMPATIBLE from compatibility.LocationCompatibility"
+    )
+    
+    # Hard blockers: only certain incompatibilities that justify SKIP/REVIEW
+    hard_blockers: list[str] = Field(
+        default_factory=list,
+        description="Definite incompatibilities (e.g., visa sponsorship required but not offered)"
+    )
+    
+    # Score adjustments: explain soft penalties (e.g., remote preference mismatch)
+    score_adjustments: dict[str, int] = Field(
+        default_factory=dict,
+        description="Score penalty reason -> points deducted (e.g., {'remote_preference_mismatch': 10})"
+    )
+    
+    # Phase 2B: Company Intelligence Assessment Results
+    # All default to None/empty for backward compatibility
+    company_industry: str | None = Field(
+        default=None,
+        description="Industry category inferred for this job's company"
+    )
+    industry_relevance: str | None = Field(
+        default=None,
+        description="RELEVANT/IRRELEVANT/UNKNOWN from compatibility.IndustryRelevance"
+    )
+    company_type: str | None = Field(
+        default=None,
+        description="PRODUCT/CONSULTING/ESN/OTHER/UNKNOWN from compatibility.CompanyType"
+    )
+    company_type_match: str | None = Field(
+        default=None,
+        description="PREFERRED/ACCEPTABLE/UNPREFERRED/UNKNOWN (candidate preference vs inferred type)"
+    )
+    sponsorship_likelihood: str | None = Field(
+        default=None,
+        description="LIKELY/POSSIBLE/UNLIKELY/UNKNOWN from compatibility.SponsorshipLikelihood"
+    )
+
     # Secondary role specific
     secondary_skills_matched: list[str] = Field(default_factory=list)
     secondary_domain_matched: bool = False
@@ -216,6 +316,10 @@ class Application(BaseModel):
     recruiter_email: str | None = None
     notes: str | None = None
     messages: list[GeneratedMessage] = Field(default_factory=list)
+    cv_used: str | None = Field(
+        default=None,
+        description="CV identifier actually selected for this application (core.cv_selector.CVSelection.cv_id), e.g. 'europe' or 'gcc'. None if no CV was selected/tracked.",
+    )
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 

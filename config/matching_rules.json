@@ -6,7 +6,7 @@
     "embedded test",
     "automotive test",
     "qa engineer",
-    "ecу test",
+    "ec\u0443 test",
     "ecu test",
     "system test",
     "integration test",
@@ -266,5 +266,209 @@
   "secondary_thresholds": {
     "APPLY": 75,
     "REVIEW": 60
+  },
+  "soft_penalties": {
+    "remote_preference_mismatch": 10,
+    "language_gap_per_level": 5,
+    "seniority_mismatch": 8,
+    "salary_below_minimum": 15,
+    "location_mismatch": 12
+  },
+  "remote_policy_keywords": {
+    "fully_remote": [
+      "fully remote",
+      "100% remote",
+      "work from home",
+      "remote first"
+    ],
+    "hybrid": [
+      "hybrid",
+      "2-3 days office",
+      "3 days on-site",
+      "flexible"
+    ],
+    "on_site": [
+      "on-site",
+      "office based",
+      "at our office",
+      "headquarters"
+    ]
+  },
+  "language_levels": {
+    "A1": [
+      "a1",
+      "elementary"
+    ],
+    "A2": [
+      "a2"
+    ],
+    "B1": [
+      "b1",
+      "intermediate"
+    ],
+    "B2": [
+      "b2",
+      "upper intermediate",
+      "fluent"
+    ],
+    "C1": [
+      "c1",
+      "advanced",
+      "near native"
+    ],
+    "C2": [
+      "c2",
+      "proficient",
+      "native proficiency"
+    ],
+    "NATIVE": [
+      "native",
+      "mother tongue"
+    ]
+  },
+  "deadline_keywords": {
+    "explicit": [
+      "application closes",
+      "deadline",
+      "apply by",
+      "closing date"
+    ],
+    "rolling": [
+      "apply anytime",
+      "rolling basis",
+      "open until filled"
+    ]
+  },
+  "salary_extraction_enabled": true,
+  "salary_period_keywords": {
+    "per_year": [
+      "per year",
+      "per annum",
+      "/year",
+      "/a",
+      "annually"
+    ],
+    "per_month": [
+      "per month",
+      "/month",
+      "/m",
+      "monthly",
+      "brutto"
+    ],
+    "per_hour": [
+      "per hour",
+      "/hour",
+      "/hr",
+      "hourly"
+    ],
+    "per_day": [
+      "per day",
+      "/day",
+      "daily"
+    ]
+  },
+  "sponsorship_keywords": [
+    "visa sponsorship available",
+    "sponsorship offered",
+    "visa support",
+    "work permit"
+  ],
+  "sponsorship_exclusions": [
+    "only eu citizens",
+    "eu candidates only",
+    "uk residents only",
+    "no sponsorship"
+  ],
+  "company_industry_keywords": {
+    "automotive": [
+      "automotive",
+      "adas",
+      "ecu",
+      "vehicle",
+      "car",
+      "automotive validation",
+      "embedded automotive",
+      "vehicle software"
+    ],
+    "fintech": [
+      "fintech",
+      "finance",
+      "payment",
+      "trading",
+      "banking",
+      "financial"
+    ],
+    "medtech": [
+      "medical",
+      "healthcare",
+      "pharma",
+      "biotech",
+      "hospital"
+    ],
+    "saas": [
+      "saas",
+      "cloud",
+      "subscription",
+      "platform as service"
+    ]
+  },
+  "company_product_keywords": [
+    "in-house",
+    "our platform",
+    "our product",
+    "internal",
+    "saas",
+    "product development",
+    "own product",
+    "product team",
+    "own codebase"
+  ],
+  "company_consulting_keywords": [
+    "consulting",
+    "client sites",
+    "staffing",
+    "billable",
+    "client project",
+    "on-site at client",
+    "professional services",
+    "contractor"
+  ],
+  "company_esn_keywords": [
+    "european staffing",
+    "staffing network",
+    "esn",
+    "staff augmentation"
+  ],
+  "company_sponsorship_offered": [
+    "visa sponsorship",
+    "sponsorship available",
+    "visa support",
+    "relocation support",
+    "relocation package",
+    "relocation assistance",
+    "can sponsor",
+    "willing to sponsor"
+  ],
+  "company_sponsorship_rejected": [
+    "no sponsorship",
+    "no visa",
+    "eu citizens only",
+    "local candidates only",
+    "citizenship required",
+    "must have work authorization",
+    "must already have"
+  ],
+  "company_international_signals": [
+    "multinational",
+    "global",
+    "international offices",
+    "worldwide presence",
+    "multiple countries",
+    "global team"
+  ],
+  "company_soft_penalties": {
+    "industry_irrelevant": 20,
+    "consulting_unpreferred": 5,
+    "sponsorship_unlikely": 10
   }
 }

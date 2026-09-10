@@ -2,6 +2,7 @@
 
 import json
 import re
+import shutil
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +22,8 @@ class ApplicationPackage:
     hr_email: str
     application_answers: dict[str, Any]
     generated_at: datetime
+    cv_path: Path | None = None
+    cv_id: str | None = None
 
 
 class PackageWriter:
@@ -45,7 +48,23 @@ class PackageWriter:
         }
         for filename, content in files.items():
             (package_dir / filename).write_text(f"{content.rstrip()}\n", encoding="utf-8")
+
+        self._copy_cv_if_present(package, package_dir)
         return package_dir
+
+    @staticmethod
+    def _copy_cv_if_present(package: "ApplicationPackage", package_dir: Path) -> None:
+        """
+        Copy the selected CV into the package as cv.pdf, if one was
+        supplied and genuinely exists on disk. Never fabricates a file --
+        a missing/absent cv_path simply means no cv.pdf is written, same
+        as the pre-CV-selection behavior.
+        """
+        if package.cv_path is None:
+            return
+        if not package.cv_path.exists():
+            return
+        shutil.copyfile(package.cv_path, package_dir / "cv.pdf")
 
     def _directory_name(self, package: ApplicationPackage) -> str:
         date = package.generated_at.astimezone(timezone.utc).date().isoformat()
@@ -55,10 +74,12 @@ class PackageWriter:
 
     @staticmethod
     def _metadata(package: ApplicationPackage) -> dict[str, Any]:
+        cv_used = package.cv_id if (package.cv_path is not None and package.cv_path.exists()) else None
         return {
             "generated_at": package.generated_at.isoformat(),
             "job": package.listing.model_dump(mode="json"),
             "match_report": package.report.model_dump(mode="json"),
+            "cv_used": cv_used,
         }
 
     @staticmethod

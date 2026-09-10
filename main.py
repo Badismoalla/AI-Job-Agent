@@ -195,6 +195,58 @@ def apply_preview(
     run_apply_preview(file)
 
 
+@app.command(name="apply-execute")
+def apply_execute(
+    package_dir: Path = typer.Argument(
+        ...,
+        help="Path to a previously generated application package directory.",
+        exists=False,
+    ),
+    mode: str = typer.Option(
+        "review_required",
+        "--mode",
+        "-m",
+        help="prepare_only | review_required | auto_submit",
+    ),
+    recipient_email: Optional[str] = typer.Option(
+        None,
+        "--recipient-email",
+        help="Recipient address for email-platform applications. Never guessed — required for Email jobs.",
+    ),
+) -> None:
+    """
+    Execute a previously generated application package (Greenhouse, Lever, or Email).
+
+    Defaults to review_required: the form is filled for you to check, but
+    never submitted automatically. Use --mode auto_submit only once you've
+    reviewed a package and are confident in it.
+
+    Example:
+        python main.py apply-execute output/20260821_bosch_engineer --mode review_required
+        python main.py apply-execute output/20260821_bosch_engineer --mode auto_submit
+    """
+    from commands.apply_execute import run_apply_execute
+
+    _print_header()
+    run_apply_execute(package_dir, mode=mode, recipient_email=recipient_email)
+
+
+@app.command(name="export-excel")
+def export_excel(
+    output: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output .xlsx path. Defaults to output/applications_export.xlsx",
+    ),
+) -> None:
+    """Export all tracked applications to an Excel file."""
+    from commands.export import run_export_excel
+
+    _print_header()
+    run_export_excel(output)
+
+
 @app.command()
 def analyze(
     file: Path = typer.Argument(

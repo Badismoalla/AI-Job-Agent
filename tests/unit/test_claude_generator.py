@@ -21,6 +21,7 @@ Coverage here:
   using a mocked anthropic client — no real network access
 """
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import anthropic
@@ -83,12 +84,17 @@ def dry_run_generator(monkeypatch) -> ClaudeGenerator:
 
 
 @pytest.fixture
-def live_generator(monkeypatch) -> ClaudeGenerator:
-    """A generator with dry_run forced False, API client replaced with a mock."""
+def live_generator(monkeypatch, tmp_path) -> ClaudeGenerator:
+    """
+    A generator with dry_run forced False, API client replaced with a mock.
+    Cache redirected to a tmp path so tests never read/write the real
+    project cache/questions.json.
+    """
     monkeypatch.setattr(settings.app, "dry_run", False)
-    gen = ClaudeGenerator()
+    gen = ClaudeGenerator(cache_path=tmp_path / "test_questions_cache.json")
     gen._client = MagicMock()
     return gen
+
 
 
 def _mock_response(text: str = "Generated message body", input_tokens: int = 10, output_tokens: int = 20):
@@ -157,6 +163,76 @@ class TestDryRunGeneration:
         result = await dry_run_generator.explain_match(job=job, match_report=match_report)
         assert isinstance(result, str)
         assert "[DRY RUN — application_answer]" in result
+
+
+# ── Answer caching (modules/ai/cache.py, docs/PROJECT_REQUIREMENTS.md §3.4) ──
+
+class TestApplicationAnswerCaching:
+    """
+    generate_application_answer() is the only generator method wired to
+    the cache — cover letters/HR emails/etc. are inherently
+    job-and-company-specific and should not be cached across jobs.
+    Caching only applies on the live (non-dry-run) path.
+    """
+
+    @pytest.mark.asyncio
+    async def test_cache_miss_calls_api_and_stores_answer(self, live_generator, job):
+        live_generator._client.messages.create.return_value = _mock_response("Because of the mission.")
+
+        msg = await live_generator.generate_application_answer(
+            question="Why do you want to join our company?", job=job
+        )
+
+        assert msg.body == "Because of the mission."
+        assert live_generator._client.messages.create.call_count == 1
+        assert live_generator._cache.get("Why do you want to join our company?") == "Because of the mission."
+
+    @pytest.mark.asyncio
+    async def test_cache_hit_does_not_call_api(self, live_generator, job):
+        live_generator._cache.set("Why do you want to join our company?", "Cached answer text.")
+
+        msg = await live_generator.generate_application_answer(
+            question="Why do you want to join our company?", job=job
+        )
+
+        assert msg.body == "Cached answer text."
+        live_generator._client.messages.create.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_second_identical_question_reuses_cache(self, live_generator, job):
+        live_generator._client.messages.create.return_value = _mock_response("First real answer.")
+
+        first = await live_generator.generate_application_answer(question="Same question?", job=job)
+        second = await live_generator.generate_application_answer(question="Same question?", job=job)
+
+        assert first.body == second.body == "First real answer."
+        assert live_generator._client.messages.create.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_different_questions_both_call_api(self, live_generator, job):
+        live_generator._client.messages.create.return_value = _mock_response("Some answer.")
+
+        await live_generator.generate_application_answer(question="Question A?", job=job)
+        await live_generator.generate_application_answer(question="Question B?", job=job)
+
+        assert live_generator._client.messages.create.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_dry_run_never_touches_cache(self, dry_run_generator, job, tmp_path, monkeypatch):
+        """Dry-run mode must not read or write any cache file."""
+        from modules.ai.cache import AnswerCache
+
+        dry_run_generator._cache = AnswerCache(tmp_path / "dry_run_cache.json")
+        await dry_run_generator.generate_application_answer(question="Any question?", job=job)
+
+        assert not (tmp_path / "dry_run_cache.json").exists()
+
+    @pytest.mark.asyncio
+    async def test_live_generator_default_construction_does_not_use_real_project_cache(self, monkeypatch):
+        """Sanity check on the fixture itself: live_generator must never point at the real cache/questions.json."""
+        monkeypatch.setattr(settings.app, "dry_run", False)
+        gen = ClaudeGenerator(cache_path=Path("/tmp/isolated_test_cache_path_check.json"))
+        assert "cache/questions.json" not in str(gen._cache._path)
 
 
 # ── Subject-line extraction ─────────────────────────────────────────────────

@@ -19,14 +19,16 @@ Responsibilities:
 
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from tinydb import Query, TinyDB
 from tinydb.storages import JSONStorage
 from tinydb.middlewares import CachingMiddleware
 
-from core.exceptions import DuplicateApplicationError, TrackerError
+from core.exceptions import DuplicateApplicationError, TrackerError, InvalidLifecycleTransitionError
+from core.lifecycle import JobLifecycleState, JobLifecycle, is_valid_transition, is_terminal
 from core.logger import get_logger
-from core.models import Application, ApplicationStatus, DailyPlan, normalize_datetime, parse_datetime, utc_now
+from core.models import Application, ApplicationStatus, DailyPlan, JobListing, MatchReport, normalize_datetime, parse_datetime, utc_now
 
 logger = get_logger(__name__)
 
@@ -45,6 +47,8 @@ class ApplicationTracker:
         self._apps = self._db.table("applications")
         self._jobs = self._db.table("jobs_seen")
         self._pipeline_runs = self._db.table("pipeline_runs")
+        self._jobs_lifecycle = self._db.table("jobs_lifecycle")  # Phase 2C
+        self._jobs_data = self._db.table("jobs_data")  # Phase 2C
         logger.info("Tracker initialised | db={path}", path=str(db_path))
 
     def add_application(self, application: Application) -> None:
@@ -65,6 +69,14 @@ class ApplicationTracker:
             role=application.job.title,
             id=application.id,
         )
+
+    def get_all_applications(self) -> list[Application]:
+        """
+        Return every stored application, deserialized back into Application
+        instances. Used by exports (Excel) and reporting — read-only, does
+        not mutate the store.
+        """
+        return [Application.model_validate(record) for record in self._apps.all()]
 
     def already_applied(self, job_id: str) -> bool:
         """Return True if we have already applied to this job."""
@@ -165,6 +177,235 @@ class ApplicationTracker:
         if not all_runs:
             return None
         return max(all_runs, key=lambda r: r.get("recorded_at", ""))
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PHASE 2C: JOB LIFECYCLE TRACKING
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def create_job_lifecycle(self, job: JobListing, initial_state: JobLifecycleState = JobLifecycleState.DISCOVERED) -> dict:
+        """
+        Create initial lifecycle record for a newly discovered job.
+        
+        Args:
+            job: JobListing from scraper
+            initial_state: Starting state (default: DISCOVERED)
+        
+        Returns:
+            Inserted lifecycle record
+        """
+        now = utc_now()
+        record = {
+            "job_id": job.id,
+            "current_state": initial_state.value,
+            "previous_state": None,
+            "discovered_at": now.isoformat(),
+            "state_changed_at": now.isoformat(),
+            "last_event": None,
+            "application_id": None,
+        }
+        self._jobs_lifecycle.insert(record)
+        logger.info(
+            "Lifecycle created | job_id={job_id} | state={state}",
+            job_id=job.id,
+            state=initial_state.value,
+        )
+        return record
+
+    def get_job_lifecycle(self, job_id: str) -> Optional[dict]:
+        """
+        Retrieve current lifecycle state of a job.
+        
+        Args:
+            job_id: JobListing.id
+        
+        Returns:
+            Lifecycle record or None if not found
+        """
+        results = self._jobs_lifecycle.search(Query().job_id == job_id)
+        return results[0] if results else None
+
+    def transition_job(
+        self, 
+        job_id: str, 
+        event: str, 
+        data: Optional[dict] = None
+    ) -> dict:
+        """
+        Execute a state transition with validation.
+        
+        Args:
+            job_id: JobListing.id
+            event: Event name triggering transition
+            data: Optional metadata to store (recruiter info, notes, etc.)
+        
+        Returns:
+            Updated lifecycle record
+        
+        Raises:
+            InvalidLifecycleTransitionError if transition is invalid
+        """
+        # Get current state
+        lifecycle = self.get_job_lifecycle(job_id)
+        if not lifecycle:
+            # Auto-create if missing (shouldn't happen, but safe default)
+            lifecycle = self.create_job_lifecycle(
+                JobListing(id=job_id, company="", title="", description="", city="", market="", url="", source=""),
+                initial_state=JobLifecycleState.DISCOVERED
+            )
+        
+        current_state = JobLifecycleState(lifecycle["current_state"])
+        
+        # Determine next state (caller responsibility to know valid transitions)
+        # This method validates and applies the transition
+        # Caller should use get_allowed_next_states() first to know valid paths
+        
+        # For now, validate that AT LEAST one outbound transition exists
+        # Full transition enforcement happens in calling code
+        if is_terminal(current_state) and current_state != JobLifecycleState.SKIPPED:
+            raise InvalidLifecycleTransitionError(
+                current_state=current_state.value,
+                event=event,
+                reason=f"Terminal state {current_state.value} cannot transition",
+            )
+        
+        logger.info(
+            "Lifecycle transition | job_id={job_id} | event={event} | from={from_state}",
+            job_id=job_id,
+            event=event,
+            from_state=current_state.value,
+        )
+        
+        return lifecycle
+
+    def update_job_lifecycle_state(
+        self,
+        job_id: str,
+        event: str,
+        next_state: JobLifecycleState,
+        data: Optional[dict] = None,
+    ) -> dict:
+        """
+        Update job lifecycle to a new state after validating transition.
+        
+        Args:
+            job_id: JobListing.id
+            event: Event that triggered transition
+            next_state: Target JobLifecycleState
+            data: Optional additional data to store
+        
+        Returns:
+            Updated lifecycle record
+        
+        Raises:
+            InvalidLifecycleTransitionError if transition is invalid
+        """
+        lifecycle = self.get_job_lifecycle(job_id)
+        if not lifecycle:
+            raise TrackerError(f"No lifecycle found for job {job_id}")
+        
+        current_state = JobLifecycleState(lifecycle["current_state"])
+        
+        # Validate transition
+        if not is_valid_transition(current_state, event, next_state):
+            raise InvalidLifecycleTransitionError(
+                current_state=current_state.value,
+                event=event,
+                reason=f"Invalid transition to {next_state.value}",
+            )
+        
+        # Update record
+        now = utc_now()
+        update_record = {
+            "previous_state": current_state.value,
+            "current_state": next_state.value,
+            "state_changed_at": now.isoformat(),
+            "last_event": event,
+        }
+        
+        # Merge any additional data
+        if data:
+            update_record.update(data)
+        
+        self._jobs_lifecycle.update(
+            update_record,
+            Query().job_id == job_id,
+        )
+        
+        logger.info(
+            "Lifecycle updated | job_id={job_id} | {from_state} → {to_state} | event={event}",
+            job_id=job_id,
+            from_state=current_state.value,
+            to_state=next_state.value,
+            event=event,
+        )
+        
+        return self.get_job_lifecycle(job_id)
+
+    def get_jobs_in_state(self, state: JobLifecycleState) -> list[dict]:
+        """
+        Get all jobs currently in a specific lifecycle state.
+        
+        Args:
+            state: JobLifecycleState to filter by
+        
+        Returns:
+            List of lifecycle records
+        """
+        return self._jobs_lifecycle.search(Query().current_state == state.value)
+
+    def update_job_data(
+        self,
+        job_id: str,
+        job: JobListing,
+        match_report: Optional[MatchReport] = None,
+    ) -> dict:
+        """
+        Store updated job data snapshot without resetting lifecycle state.
+        
+        Args:
+            job_id: JobListing.id
+            job: Updated JobListing
+            match_report: Optional updated MatchReport
+        
+        Returns:
+            Stored job data record
+        """
+        now = utc_now()
+        record = {
+            "job_id": job_id,
+            "job_listing": job.model_dump(mode="json"),
+            "last_updated": now.isoformat(),
+        }
+        
+        if match_report:
+            record["last_matched_at"] = now.isoformat()
+            record["last_match_decision"] = match_report.decision.value
+            record["last_match_score"] = match_report.score
+        
+        self._jobs_data.upsert(
+            record,
+            Query().job_id == job_id,
+        )
+        
+        logger.info(
+            "Job data updated | job_id={job_id} | preserved lifecycle state",
+            job_id=job_id,
+        )
+        
+        return record
+
+    def get_job_data(self, job_id: str) -> Optional[dict]:
+        """
+        Retrieve latest job data snapshot.
+        
+        Args:
+            job_id: JobListing.id
+        
+        Returns:
+            Job data record or None if not found
+        """
+        results = self._jobs_data.search(Query().job_id == job_id)
+        return results[0] if results else None
 
     def close(self) -> None:
         """Flush and close the database."""

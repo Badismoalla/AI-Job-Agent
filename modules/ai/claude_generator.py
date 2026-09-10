@@ -23,6 +23,7 @@ from core.exceptions import AIGenerationError
 from core.logger import get_logger
 from core.models import GeneratedMessage, JobListing, MatchReport, MessageType
 from modules.ai.base import BaseMessageGenerator
+from modules.ai.cache import AnswerCache
 from modules.ai.prompts import (
     SYSTEM_PROMPT,
     application_answer_prompt,
@@ -43,7 +44,7 @@ class ClaudeGenerator(BaseMessageGenerator):
     Implements BaseMessageGenerator — swap with MockGenerator for tests.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, cache_path=None) -> None:
         api_key = settings.ai.anthropic_api_key
         self._dry_run = settings.app.dry_run
 
@@ -61,6 +62,7 @@ class ClaudeGenerator(BaseMessageGenerator):
         self._client = anthropic.Anthropic(api_key=api_key)
         self._model = settings.ai.anthropic_model
         self._max_tokens = settings.ai.anthropic_max_tokens
+        self._cache = AnswerCache(cache_path) if cache_path is not None else AnswerCache()
 
     async def generate_cover_letter(
         self,
@@ -195,7 +197,24 @@ class ClaudeGenerator(BaseMessageGenerator):
         job: JobListing,
         max_words: int = 150,
     ) -> GeneratedMessage:
-        """Answer a specific application question."""
+        """
+        Answer a specific application question.
+
+        On the live (non-dry-run) path, checks the local answer cache
+        first (modules/ai/cache.py) to avoid re-asking Claude the same
+        question across applications, per docs/PROJECT_REQUIREMENTS.md
+        Section 3.4. Dry-run mode never consults or writes the cache.
+        """
+        if not self._dry_run:
+            cached_answer = self._cache.get(question)
+            if cached_answer is not None:
+                logger.info("Using cached answer | question={question!r}", question=question)
+                return GeneratedMessage(
+                    type=MessageType.APPLICATION_ANSWER,
+                    body=cached_answer,
+                    model_used=f"{self._model} (cached)",
+                )
+
         prompt = application_answer_prompt(
             question=question,
             job_title=job.title,
@@ -204,6 +223,9 @@ class ClaudeGenerator(BaseMessageGenerator):
         )
 
         body = await self._call(prompt, MessageType.APPLICATION_ANSWER)
+
+        if not self._dry_run:
+            self._cache.set(question, body)
 
         return GeneratedMessage(
             type=MessageType.APPLICATION_ANSWER,

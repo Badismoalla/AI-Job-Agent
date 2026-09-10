@@ -15,7 +15,7 @@ mitigation), edit config/matching_rules.json — no Python change required.
 """
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -66,6 +66,15 @@ class MatchingRules:
     weights: dict[str, int]
     primary_thresholds: dict[str, int]
     secondary_thresholds: dict[str, int]
+    
+    # Phase 2A: Optional fields with defaults for backward compatibility
+    soft_penalties: dict[str, int] = field(default_factory=dict)
+    remote_policy_keywords: dict[str, list[str]] = field(default_factory=dict)
+    language_levels: dict[str, list[str]] = field(default_factory=dict)
+    deadline_keywords: dict[str, list[str]] = field(default_factory=dict)
+    salary_period_keywords: dict[str, list[str]] = field(default_factory=dict)
+    sponsorship_keywords: list[str] = field(default_factory=list)
+    sponsorship_exclusions: list[str] = field(default_factory=list)
 
 
 def load_matching_rules(path: Path | None = None) -> MatchingRules:
@@ -110,4 +119,21 @@ def load_matching_rules(path: Path | None = None) -> MatchingRules:
             f"Matching rules file is missing required keys {sorted(missing)}: {rules_path}"
         )
 
-    return MatchingRules(**{key: data[key] for key in _REQUIRED_KEYS})
+    # Load required keys + optional Phase 2A fields
+    rules_dict = {key: data[key] for key in _REQUIRED_KEYS}
+    
+    # Add optional Phase 2A fields if present
+    optional_fields = [
+        "soft_penalties",
+        "remote_policy_keywords",
+        "language_levels",
+        "deadline_keywords",
+        "salary_period_keywords",
+        "sponsorship_keywords",
+        "sponsorship_exclusions",
+    ]
+    for opt_field in optional_fields:
+        if opt_field in data:
+            rules_dict[opt_field] = data[opt_field]
+    
+    return MatchingRules(**rules_dict)

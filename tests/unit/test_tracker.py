@@ -27,6 +27,57 @@ def test_add_and_retrieve(sample_job, tmp_db):
         assert stats["total_applications"] == 1
 
 
+def test_get_all_applications_empty(tmp_db):
+    with ApplicationTracker(tmp_db) as tracker:
+        assert tracker.get_all_applications() == []
+
+
+def test_get_all_applications_returns_application_instances(sample_job, tmp_db):
+    with ApplicationTracker(tmp_db) as tracker:
+        app = _make_application(sample_job)
+        tracker.add_application(app)
+
+        results = tracker.get_all_applications()
+        assert len(results) == 1
+        assert isinstance(results[0], Application)
+        assert results[0].id == app.id
+        assert results[0].job.company == sample_job.company
+
+
+def test_get_all_applications_returns_multiple_in_insertion_order(sample_job, tmp_db):
+    with ApplicationTracker(tmp_db) as tracker:
+        job2 = sample_job.model_copy(update={"id": "other-job-id", "company": "Other Co"})
+        app1 = _make_application(sample_job, applied_days_ago=2)
+        app2 = _make_application(job2, applied_days_ago=1)
+        tracker.add_application(app1)
+        tracker.add_application(app2)
+
+        results = tracker.get_all_applications()
+        assert len(results) == 2
+        companies = {r.job.company for r in results}
+        assert companies == {sample_job.company, "Other Co"}
+
+
+def test_add_application_round_trips_cv_used(sample_job, tmp_db):
+    """cv_used (core.cv_selector.CVSelection.cv_id) survives a store/retrieve cycle unmodified."""
+    with ApplicationTracker(tmp_db) as tracker:
+        app = _make_application(sample_job)
+        app = app.model_copy(update={"cv_used": "europe"})
+        tracker.add_application(app)
+
+        results = tracker.get_all_applications()
+        assert results[0].cv_used == "europe"
+
+
+def test_add_application_without_cv_used_defaults_to_none(sample_job, tmp_db):
+    with ApplicationTracker(tmp_db) as tracker:
+        app = _make_application(sample_job)
+        tracker.add_application(app)
+
+        results = tracker.get_all_applications()
+        assert results[0].cv_used is None
+
+
 def test_duplicate_raises(sample_job, tmp_db):
     with ApplicationTracker(tmp_db) as tracker:
         app = _make_application(sample_job)

@@ -9,6 +9,7 @@ from rich.panel import Panel
 from core.exceptions import JobSearchError
 from core.logger import get_logger
 from core.models import MatchDecision
+from core.cv_selector import CVSelector
 from modules.ai.claude_generator import ClaudeGenerator
 from commands.pipeline import parse_and_match
 from commands.display import console, decision_label, decision_border_style
@@ -41,6 +42,12 @@ def run_apply_preview(file_path: Path) -> None:
         console.print("[red]No package generated for this job.[/red]")
         return
 
+    cv_selection = CVSelector().select(listing, tier=report.tier)
+    if cv_selection.review_required:
+        console.print(f"[yellow]⚠ No CV selected automatically:[/yellow] {cv_selection.reason}")
+    else:
+        console.print(f"[dim]CV selected: {cv_selection.cv_id} ({cv_selection.path.name})[/dim]")
+
     generated_at = datetime.now(timezone.utc)
     messages = asyncio.run(_generate_messages(listing, report))
     package = ApplicationPackage(
@@ -55,6 +62,8 @@ def run_apply_preview(file_path: Path) -> None:
             "questions": [],
         },
         generated_at=generated_at,
+        cv_path=cv_selection.path,
+        cv_id=cv_selection.cv_id,
     )
     package_dir = PackageWriter().write(package)
 

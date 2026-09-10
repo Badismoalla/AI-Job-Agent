@@ -1,0 +1,19 @@
+{
+  "_comment": "CV selection configuration. Paths are relative to the project root. Only list CVs that actually exist on disk — the selector treats a missing file as a hard failure (REVIEW_REQUIRED), never a fallback to guessing. Verified against resumes/ on 2026-08-30: exactly two real files exist, split by market region, not by role — there is no separate CV per role tier today.",
+  "cvs": [
+    {
+      "id": "europe",
+      "path": "resumes/Europe/Badis_Moalla.pdf",
+      "markets": ["Poland", "Netherlands", "Luxembourg"],
+      "role_tiers": ["primary", "secondary"],
+      "priority": 1
+    },
+    {
+      "id": "gcc",
+      "path": "resumes/GCC/Badis_Moalla CV.pdf",
+      "markets": ["UAE", "Saudi Arabia", "Qatar"],
+      "role_tiers": ["primary", "secondary"],
+      "priority": 1
+    }
+  ]
+}
